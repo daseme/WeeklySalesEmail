@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "/mnt/c/Users/Kurt/.virtualenvs/WeeklySalesEmail-blAz3f9_/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/email_tempaltes"
+
+    ],
+    "python.analysis.autoImportCompletions": true
+}

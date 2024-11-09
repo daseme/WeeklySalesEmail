@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run main.py",
+            "type": "shell",
+            "command": "/mnt/c/Users/Kurt/.virtualenvs/WeeklySalesEmail-blAz3f9_/Scripts/python.exe",
+            "args": [
+                "/mnt/c//Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/WeeklySalesEmailUsers/main.py"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

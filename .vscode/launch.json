@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Ice Breaker Runner",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "/mnt/c/Users/Kurt/.virtualenvs/WeeklySalesEmail-blAz3f9_/Scripts/python.exe",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
