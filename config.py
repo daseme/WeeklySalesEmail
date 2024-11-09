@@ -11,17 +11,14 @@ load_dotenv()
 @dataclass
 class AEBudget:
     """Represents the quarterly budget for an Account Executive"""
-
     q1: float
     q2: float
     q3: float
     q4: float
 
-
 @dataclass
 class Config:
     """Main configuration class for the sales report application"""
-
     root_path: str
     reports_folder: str
     vba_path: str
@@ -30,7 +27,7 @@ class Config:
     email_recipients: Dict[str, List[str]]
     ae_budgets: Dict[str, AEBudget]
     test_mode: bool = False
-    test_email: str = "kurt.olmstead@crossingstv.com"
+    test_email: str = None
 
     @classmethod
     def load_from_json(cls, config_path: str) -> "Config":
@@ -52,16 +49,42 @@ class Config:
             for name, budget_data in config_data["ae_budgets"].items()
         }
 
+        # Load email recipients from environment variables
+        email_recipients = cls._load_email_recipients(config_data["ae_list"])
+
         return cls(
             root_path=config_data["root_path"],
             reports_folder=config_data["reports_folder"],
             vba_path=config_data["vba_path"],
-            sendgrid_api_key=config_data["sendgrid_api_key"],
-            sender_email=config_data["sender_email"],
-            email_recipients=config_data["email_recipients"],
+            sendgrid_api_key=os.getenv("SENDGRID_API_KEY", ""),
+            sender_email=os.getenv("SENDER_EMAIL", "portaladmin@crossingstv.com"),
+            email_recipients=email_recipients,
             ae_budgets=ae_budgets,
             test_mode=config_data.get("test_mode", False),
+            test_email=os.getenv("TEST_EMAIL", "kurt.olmstead@crossingstv.com"),
         )
+
+    @staticmethod
+    def _load_email_recipients(ae_list: List[str]) -> Dict[str, List[str]]:
+        """
+        Load email recipients from environment variables
+
+        Args:
+            ae_list: List of AE names to load recipients for
+
+        Returns:
+            Dictionary mapping AE names to lists of email recipients
+        """
+        email_recipients = {}
+        for ae in ae_list:
+            # Environment variable should be in format: AE_EMAILS_CHARMAINE="email1@domain.com,email2@domain.com"
+            env_key = f"AE_EMAILS_{ae.upper()}"
+            emails_str = os.getenv(env_key, "")
+            if emails_str:
+                email_recipients[ae] = [email.strip() for email in emails_str.split(",")]
+            else:
+                email_recipients[ae] = []
+        return email_recipients
 
     @classmethod
     def load_default(cls, test_mode: bool = False) -> "Config":
@@ -76,60 +99,39 @@ class Config:
         """
         root = Path("C:/Users/kurt/Crossings TV Dropbox/kurt olmstead/Financial")
 
-        # Production email lists
-        prod_recipients = {
-            "Charmaine": [
-                "kurt.olmstead@crossingstv.com",
-                "aki.li@crossingstv.com",
-                "daniel.sakaya@crossingstv.com",
-                "katherine.lynch@crossingstv.com",
-                "mariela.lahoz@crossingstv.com",
-                "charmaine.lane@crossingstv.com",
-            ],
-            "WorldLink": [
-                "kurt.olmstead@crossingstv.com",
-                "aki.li@crossingstv.com",
-                "daniel.sakaya@crossingstv.com",
-                "mariela.lahoz@crossingstv.com",
-                "katherine.lynch@crossingstv.com",
-            ],
-            "Riley": [
-                "kurt.olmstead@crossingstv.com",
-                "aki.li@crossingstv.com",
-                "daniel.sakaya@crossingstv.com",
-                "katherine.lynch@crossingstv.com",
-                "mariela.lahoz@crossingstv.com",
-            ],
-        }
+        # Load SendGrid API key and test email from environment variables
+        sendgrid_api_key = os.getenv("SENDGRID_API_KEY", "")
+        test_email = os.getenv("TEST_EMAIL", "kurt.olmstead@crossingstv.com")
+        sender_email = os.getenv("SENDER_EMAIL", "portaladmin@crossingstv.com")
 
-        # Test mode email lists - only send to test email
-        test_recipients = {
-            "Charmaine": ["kurt.olmstead@crossingstv.com"],
-            "WorldLink": ["kurt.olmstead@crossingstv.com"],
-            "Riley": ["kurt.olmstead@crossingstv.com"],
-        }
-
-        # Load SendGrid API key from environment variable
-        sendgrid_api_key = os.getenv(
-            "SENDGRID_API_KEY",
-            "",
-        )
         if not sendgrid_api_key and not test_mode:
             raise ValueError("SendGrid API key not found in environment variables")
+
+        # Load email recipients from environment variables
+        ae_list = ["Charmaine", "WorldLink", "Riley"]
+        email_recipients = {}
+        
+        if test_mode:
+            # In test mode, use test email for all AEs
+            email_recipients = {ae: [test_email] for ae in ae_list}
+        else:
+            # Load production emails from environment variables
+            email_recipients = cls._load_email_recipients(ae_list)
 
         return cls(
             root_path=str(root),
             reports_folder=str(root / "Sales/WeeklyReports/reports"),
             vba_path=str(root / "Sales/WeeklyReports/vbaProject.bin"),
             sendgrid_api_key=sendgrid_api_key,
-            sender_email="portaladmin@crossingstv.com",
-            email_recipients=test_recipients if test_mode else prod_recipients,
+            sender_email=sender_email,
+            email_recipients=email_recipients,
             ae_budgets={
                 "Charmaine": AEBudget(440684, 499694, 482675, 589823),
                 "Riley": AEBudget(274375, 205875, 888509, 935867),
                 "WorldLink": AEBudget(136251, 152100, 134550, 162099),
             },
             test_mode=test_mode,
+            test_email=test_email,
         )
 
     def get_forecast_path(self) -> str:
