@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Sales Report</title>
+    <style type="text/css">
+        /* Reset styles for email clients */
+        body, p, td, th {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Container */
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        /* Header */
+        .header {
+            background-color: #0792d0;
+            padding: 20px;
+        }
+        
+        .header-content {
+            display: table;
+            width: 100%;
+        }
+        
+        .header-text {
+            display: table-cell;
+            vertical-align: middle;
+            color: #ffffff;
+        }
+        
+        .logo {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: right;
+        }
+        
+        .logo img {
+            width: 100px;
+            height: auto;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background-color: #f8fafc;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #2b6cb0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        /* AE Section */
+        .ae-card {
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .ae-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .quarter-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px;
+        }
+        
+        .quarter-card {
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        /* Info Section */
+        .info-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff5f5;
+            border-left: 4px solid #fc8181;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="header-text">
+                    <h2 style="margin: 0; font-size: 24px;">Weekly Sales Report</h2>
+                    <p style="margin-top: 5px;">{{report_date}}</p>
+                </div>
+                <div class="logo">
+                    <td align="right" width="120">
+                        <!-- Updated image tag here -->
+                        <img src="{{ logo_base64 }}" alt="Company Logo" width="100" height="100" style="display: block;">
+                    </td>
+                </div>
+            </div>
+        </div>
+
+        <table class="stats-grid">
+            <tr>
+                <td class="stat-card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-value">${{total_revenue}}</div>
+                </td>
+                <td class="stat-card">
+                    <div class="stat-label">Total Customers</div>
+                    <div class="stat-value">{{total_customers}}</div>
+                </td>
+            </tr>
+        </table>
+
+        {% for ae in ae_data %}
+        <div class="ae-card">
+            <div class="ae-name">{{ae.name}}'s Performance</div>
+            
+            <table class="stats-grid">
+                <tr>
+                    <td class="stat-card">
+                        <div class="stat-label">Total Revenue</div>
+                        <div class="stat-value">${{ae.total_assigned_revenue}}</div>
+                    </td>
+                    <td class="stat-card">
+                        <div class="stat-label">Total Customers</div>
+                        <div class="stat-value">{{ae.total_customers}}</div>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="quarter-grid">
+                <tr>
+                {% for quarter in ae.quarters %}
+                    <td class="quarter-card">
+                        <div style="font-weight: bold; margin-bottom: 10px;">{{quarter.name}}</div>
+                        <div>${{quarter.assigned}}</div>
+                        <div style="color: #718096;">Unassigned: ${{quarter.unassigned}}</div>
+                    </td>
+                {% endfor %}
+                </tr>
+            </table>
+        </div>
+        {% endfor %}
+
+        <div class="info-section">
+            <strong>Note:</strong> This report shows GROSS revenue figures.
+        </div>
+    </div>
+</body>
+</html>

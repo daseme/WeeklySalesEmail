@@ -103,28 +103,38 @@ class ExcelFormatter:
         finally:
             workbook.close()
 
-    def _format_sheet1(
-        self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData
-    ):
+    def _format_sheet1(self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData):
         """Format the main sales report sheet"""
-        # Create formats
         money_fmt = workbook.add_format({"num_format": 42, "align": "center"})
         text_fmt = workbook.add_format({"align": "left"})
 
-        # Set column formats
         worksheet.set_column("A:B", 15, text_fmt)
         worksheet.set_column("C:C", 30, text_fmt)
         worksheet.set_column("D:G", 10, money_fmt)
 
-        # Add table
-        self._add_sales_table(worksheet, sales_data)
+        # Filter data for current AE
+        ae_data = sales_data.report[sales_data.report['AE1'] == ae_name]
+        
+        # Calculate table range including all rows plus header and total row
+        total_rows = len(ae_data)
+        table_range = f"A1:G{total_rows + 1}"  # +1 for header, +1 for total row
 
-        # Add formatting options
+        columns = [{"header": "AE1"}, {"header": "Sector"}, {"header": "Customer"}]
+        for quarter in sales_data.quarter_columns:
+            columns.append({"header": quarter, "total_function": "sum"})
+
+        worksheet.add_table(
+            table_range,
+            {
+                "columns": columns,
+                "autofilter": True,
+                "total_row": True,
+                "style": "Table Style Light 11",
+            }
+        )
+
         worksheet.freeze_panes(1, 0)
         worksheet.set_zoom(90)
-
-        # Add VBA button
-        self._add_vba_button(worksheet)
 
     def _format_sheet2(
         self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData

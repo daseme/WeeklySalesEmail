@@ -1,61 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        {{ css_styles | safe }}
-    </style>
+    <meta charset="utf-8">
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Hello {{ ae_name }}!</h2>
-        </div>
-       
-        <div class="stats-card">
-            <div class="stats-title">Portfolio Overview</div>
-            <div class="stats-grid">
-                {% for stat in overview_stats %}
-                <div class="stat-item">
-                    <div class="stat-label">{{ stat.label }}</div>
-                    <div class="stat-value">{{ stat.value }}</div>
-                </div>
-                {% endfor %}
-            </div>
-           
-            <div class="quarters-container">
-                {% for card in quarterly_cards %}
-                <div class="quarter-card">
-                    <div class="quarter-title">{{ card.title }}</div>
-                    <ul class="quarter-list">
-                        {% for item in card.quarters %}
-                        <li class="quarter-item">
-                            <span class="quarter-label">{{ item.quarter }}</span>
-                            <span class="quarter-value">{{ item.amount }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-       
-        <div class="info-section">
-            <strong>Note:</strong> This report shows GROSS revenue.
-        </div>
-       
-        <div class="info-section">
-            If you think there is a mis-reported number: Send me the number in question along
-            with the booked business number. With those two pieces of information I will then
-            be able to reconcile the difference.
-        </div>
-       
-        <div class="instructions">
-            <h4>Instructions</h4>
-            <ol>
-                <li>Open attached excel file</li>
-                <li>Enable editing</li>
-            </ol>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f8fafc">
+        <tr>
+            <td align="center" style="padding: 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="font-family: Arial, sans-serif;">
+                    <!-- Header -->
+                    <tr>
+                        <td bgcolor="#0792d0" style="padding: 30px; border-radius: 12px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="color: white;">
+                                        <h2 style="margin: 0; font-size: 28px; font-family: Arial, sans-serif; color: #ffffff;">Hello {{ ae_name }}!</h2>
+                                    </td>
+                                    <td align="right" width="120">
+                                        <!-- Updated image tag here -->
+                                        <img src="{{ logo_base64 }}" alt="Company Logo" width="100" height="100" style="display: block;">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Rest of the file remains exactly the same -->
+                    <!-- Stats Card -->
+                    <tr>
+                        <td style="padding: 24px;">
+                            <div style="font-size: 20px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">
+                                Portfolio Overview
+                            </div>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    {% for stat in overview_stats %}
+                                    <td width="33%" style="padding: 10px;">
+                                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center;">
+                                            <div style="font-size: 14px; color: #4a5568; margin-bottom: 8px;">{{ stat.label }}</div>
+                                            <div style="font-size: 24px; font-weight: 700; color: #2b6cb0;">{{ stat.value }}</div>
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                            </table>
+
+                            <!-- Quarterly Cards -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 24px;">
+                                <tr>
+                                    {% for card in quarterly_cards %}
+                                    <td width="50%" style="padding: 10px;">
+                                        <div style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px;">
+                                            <div style="font-size: 18px; font-weight: 600; text-align: center; margin-bottom: 16px;">
+                                                {{ card.title }}
+                                            </div>
+                                            <table width="100%" cellpadding="8" cellspacing="0">
+                                                {% for item in card.quarters %}
+                                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                                    <td style="font-weight: 600; color: #4a5568;">{{ item.quarter }}</td>
+                                                    <td align="right" style="color: #2b6cb0; font-weight: 600;">{{ item.amount }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </table>
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Info Sections -->
+                    <tr>
+                        <td style="padding: 0 24px;">
+                            <div style="background: #fff5f5; border-left: 4px solid #fc8181; padding: 16px; margin-bottom: 24px;">
+                                <strong>Note:</strong> This report shows GROSS revenue.
+                            </div>
+                            
+                            <div style="background: #fff5f5; border-left: 4px solid #fc8181; padding: 16px; margin-bottom: 24px;">
+                                If you think there is a mis-reported number: Send me the number in question along
+                                with the booked business number. With those two pieces of information I will then
+                                be able to reconcile the difference.
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Instructions -->
+                    <tr>
+                        <td style="padding: 0 24px 24px;">
+                            <div style="background: #f7fafc; padding: 20px; border: 1px solid #e2e8f0;">
+                                <h4 style="margin-top: 0; margin-bottom: 12px;">Instructions</h4>
+                                <ol style="margin: 0; padding-left: 20px;">
+                                    <li style="margin-bottom: 8px;">Open attached excel file</li>
+                                    <li style="margin-bottom: 8px;">Enable editing</li>
+                                </ol>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

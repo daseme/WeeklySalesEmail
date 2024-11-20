@@ -1,7 +1,9 @@
-from typing import Dict
+from turtle import st
+from typing import Dict, List
 from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
+from email_sender import ManagementStats
 
 
 @dataclass
@@ -71,6 +73,48 @@ class SalesAnalytics:
             quarterly_totals=quarterly_totals,
             avg_per_customer=avg_per_customer,
             unassigned_totals=unassigned_totals,
+        )
+
+    @dataclass
+    class ManagementStats:
+        """Container for management rollup statistics"""
+        total_revenue: float
+        total_customers: int
+        ae_data: List[Dict]
+
+    def calculate_management_stats(self, sales_data: pd.DataFrame) -> ManagementStats:
+        """Calculate management level statistics"""
+        # Get current year for dynamic quarter columns
+        current_year = datetime.now().year
+        year_prefix = str(current_year)[2:]  
+        quarter_columns = [f"{year_prefix}Q{q}" for q in range(1, 5)]
+        
+        total_revenue = sales_data[sales_data['Sector'] != 'AAA - UNASSIGNED'][quarter_columns].sum().sum()
+        total_customers = len(sales_data['Customer'].unique())
+        
+        ae_data = []
+        for ae_name in sales_data['AE1'].unique():
+            ae_stats = self.calculate_sales_stats(sales_data, ae_name)
+            ae_quarters = []
+            for q in range(1, 5):
+                quarter = {
+                    'name': f'Q{q}',
+                    'assigned': ae_stats.quarterly_totals[f'{year_prefix}Q{q}'],
+                    'unassigned': ae_stats.unassigned_totals[f'{year_prefix}Q{q}']
+                }
+                ae_quarters.append(quarter)
+                
+            ae_data.append({
+                'name': ae_name,
+                'total_assigned_revenue': ae_stats.total_assigned_revenue,
+                'total_customers': ae_stats.total_customers,
+                'quarters': ae_quarters
+            })
+        
+        return ManagementStats(
+            total_revenue=total_revenue,
+            total_customers=total_customers,
+            ae_data=ae_data
         )
 
     @staticmethod

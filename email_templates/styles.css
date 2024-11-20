@@ -1,7 +1,7 @@
 .container {
     max-width: 800px;
     margin: 0 auto;
-    font-family: 'Arial', sans-serif;
+    font-family: Arial, sans-serif;
     line-height: 1.6;
     color: #2d3748;
 }
@@ -15,10 +15,21 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.header h2 {
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-text h2 {
     margin: 0;
     font-size: 28px;
     font-weight: 600;
+}
+
+.header-logo img {
+    width: 120px;
+    height: 120px;
 }
 
 .stats-card {

@@ -450,108 +450,58 @@ class DataProcessor:
     def save_report(
         self, report: pd.DataFrame, budget_unassigned: pd.DataFrame, report_folder: str
     ) -> List[str]:
-        """Save reports as regular Excel files with proper formatting and calculations"""
+        """Save reports as regular Excel files with proper formatting"""
         files_created = []
-
-        # Ensure report folder exists
         os.makedirs(report_folder, exist_ok=True)
 
-        # Get unique AEs
-        unique_aes = report["AE1"].unique()
-        print(f"Processing reports for AEs: {unique_aes}")
-
-        for sales_person in unique_aes:
-            # Create filename with xlsx extension
+        for sales_person in report["AE1"].unique():
             filename = f"{sales_person}-Sales Tool-{datetime.now().strftime('%y%m%d-%H%M%S')}.xlsx"
             full_path = os.path.join(report_folder, filename)
-
-            # Filter data for this sales person
             sales_person_data = report[report.AE1 == sales_person].copy()
-            budget_data = budget_unassigned[
-                budget_unassigned.AE1 == sales_person
-            ].copy()
-
-            print(f"Records for {sales_person}: {len(sales_person_data)}")
+            budget_data = budget_unassigned[budget_unassigned.AE1 == sales_person].copy()
 
             try:
-                # Create Excel writer with xlsxwriter engine
                 with pd.ExcelWriter(full_path, engine="xlsxwriter") as writer:
-                    # Write the sheets
+                    # Write data first
                     sales_person_data.to_excel(writer, sheet_name="Sheet1", index=False)
-                    budget_data.to_excel(
-                        writer, sheet_name="Budget-Assigned-Unassigned", index=False
-                    )
-
-                    # Get workbook and add formats
+                    budget_data.to_excel(writer, sheet_name="Budget-Assigned-Unassigned", index=False)
+                    
                     workbook = writer.book
-
-                    # Add money format
-                    money_fmt = workbook.add_format(
-                        {"num_format": "$#,##0", "align": "right"}
-                    )
-
-                    # Add total row format
-                    total_fmt = workbook.add_format(
-                        {
-                            "bold": True,
-                            "num_format": "$#,##0",
-                            "align": "right",
-                            "top": 1,
-                        }
-                    )
-
-                    # Format Sheet1
                     worksheet1 = writer.sheets["Sheet1"]
+                    
+                    # Set formats
+                    money_fmt = workbook.add_format({"num_format": "$#,##0", "align": "right"})
+                    
+                    # Column formatting
+                    worksheet1.set_column("A:B", 15)
+                    worksheet1.set_column("C:C", 30)
+                    worksheet1.set_column("D:G", 12, money_fmt)
 
-                    # Set column widths
-                    worksheet1.set_column("A:B", 15)  # AE1 and Sector
-                    worksheet1.set_column("C:C", 30)  # Customer
-                    worksheet1.set_column("D:G", 12)  # Quarter columns
-
-                    # Apply money format to quarter columns
-                    for col in range(3, 7):  # columns D through G
-                        worksheet1.set_column(col, col, 12, money_fmt)
-
-                    # Calculate last row for data (not including totals)
-                    last_data_row = len(sales_person_data)
-
-                    # Add table excluding the totals row
-                    quarter_cols = self.config.get_quarter_columns()
-                    table_options = {
+                    # Critical change: Calculate table range to include all data rows plus header and totals
+                    num_rows = len(sales_person_data)
+                    end_row = num_rows + 1  # Add 1 for header and 1 for totals
+                    
+                    # Define the Excel table with proper range
+                    worksheet1.add_table(0, 0, end_row, 6, {
                         "columns": [
                             {"header": "AE1"},
                             {"header": "Sector"},
                             {"header": "Customer"},
-                            {"header": quarter_cols[0]},
-                            {"header": quarter_cols[1]},
-                            {"header": quarter_cols[2]},
-                            {"header": quarter_cols[3]},
+                            {"header": self.quarter_columns[0], "total_function": "sum"},
+                            {"header": self.quarter_columns[1], "total_function": "sum"},
+                            {"header": self.quarter_columns[2], "total_function": "sum"},
+                            {"header": self.quarter_columns[3], "total_function": "sum"}
                         ],
                         "style": "Table Style Light 11",
                         "autofilter": True,
-                    }
+                        "total_row": True
+                    })
 
-                    worksheet1.add_table(0, 0, last_data_row - 1, 6, table_options)
-
-                    # Add totals row separately
-                    total_row = last_data_row + 1
-                    worksheet1.write(
-                        total_row, 0, "Total", workbook.add_format({"bold": True})
-                    )
-
-                    # Add SUM formulas for each quarter column
-                    for col in range(3, 7):
-                        col_letter = chr(
-                            65 + col
-                        )  # Convert number to letter (3 = D, 4 = E, etc.)
-                        formula = f"=SUM({col_letter}2:{col_letter}{last_data_row})"
-                        worksheet1.write_formula(total_row, col, formula, total_fmt)
-
-                    # Format Budget-Assigned-Unassigned sheet
+                    # Format other sheet
                     worksheet2 = writer.sheets["Budget-Assigned-Unassigned"]
                     worksheet2.set_column("A:B", 15)
                     worksheet2.set_column("C:C", 30)
-                    worksheet2.set_column("D:H", 12, money_fmt)  # Include Total column
+                    worksheet2.set_column("D:H", 12, money_fmt)
 
                     # Freeze panes and set zoom
                     worksheet1.freeze_panes(1, 0)
@@ -559,11 +509,9 @@ class DataProcessor:
                     worksheet1.set_zoom(90)
                     worksheet2.set_zoom(90)
 
-                files_created.append(full_path)
-                print(f"Created file: {full_path}")
+                    files_created.append(full_path)
 
             except Exception as e:
-                print(f"Error saving report for {sales_person}: {str(e)}")
                 if os.path.exists(full_path):
                     os.remove(full_path)
                 raise
