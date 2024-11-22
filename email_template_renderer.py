@@ -127,12 +127,18 @@ class EmailTemplateRenderer:
             context = {
                 'report_date': datetime.now().strftime('%Y-%m-%d'),
                 'total_revenue': self._format_currency(stats.total_revenue),
+                'total_unassigned_revenue': self._format_currency(stats.total_unassigned_revenue),
                 'total_customers': stats.total_customers,
                 'ae_data': self._format_ae_data(stats.ae_data),
                 'logo_base64': self.logo_base64
             }
             
             return template.render(**context)
+            
+        except Exception as e:
+            self.logger.error(f"Error rendering management template: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise
             
         except Exception as e:
             self.logger.error(f"Error rendering management template: {str(e)}")
@@ -190,5 +196,5 @@ class EmailTemplateRenderer:
 
     @staticmethod
     def _format_currency(amount: float) -> str:
-        """Format number as currency string"""
-        return f"{amount:,.2f}"
+        """Format number as currency string with no decimal places"""
+        return f"{int(round(amount)):,}"
