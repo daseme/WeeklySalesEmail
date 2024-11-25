@@ -141,18 +141,17 @@ def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False)
                 logger.error(f"Error processing {ae_name}: {str(e)}")
                 logger.error(traceback.format_exc())
         
-        # Send management report in test mode
-        if test_mode:
-            try:
-                logger.info("Generating management report")
-                management_stats = sales_analytics.calculate_management_stats(sales_data.report)
-                if email_sender.send_management_report(management_stats):
-                    logger.info("Successfully sent management report")
-                else:
-                    logger.error("Failed to send management report")
-            except Exception as e:
-                logger.error(f"Error sending management report: {str(e)}")
-                logger.error(traceback.format_exc())
+        # Send management report (removed test_mode condition)
+        try:
+            logger.info("Generating management report")
+            management_stats = sales_analytics.calculate_management_stats(sales_data.report)
+            if email_sender.send_management_report(management_stats):
+                logger.info("Successfully sent management report")
+            else:
+                logger.error("Failed to send management report")
+        except Exception as e:
+            logger.error(f"Error sending management report: {str(e)}")
+            logger.error(traceback.format_exc())
         
         # Log summary
         success = success_count == total_reports
