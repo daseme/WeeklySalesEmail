@@ -1,18 +1,16 @@
 import pandas as pd
 import numpy as np
-import openpyxl
-import xlsxwriter
 from dataclasses import dataclass
 from typing import Tuple, List, Dict
 import glob
 import os
 from datetime import datetime
+from config import Config, AccountExecutive
 
 
 @dataclass
 class Budget:
     """Container for quarterly budget values"""
-
     q1: float
     q2: float
     q3: float
@@ -22,10 +20,9 @@ class Budget:
 @dataclass
 class Config:
     """Configuration container"""
-
     root_path: str
-    reports_folder: str  # Add this
-    vba_path: str  # Add this
+    reports_folder: str
+    vba_path: str
     sendgrid_api_key: str
     sender_email: str
     email_recipients: Dict[str, List[str]]
@@ -36,7 +33,6 @@ class Config:
 @dataclass
 class SalesData:
     """Container for processed sales data"""
-
     report: pd.DataFrame
     budget_unassigned: pd.DataFrame
     quarter_columns: List[str]
@@ -48,7 +44,7 @@ class DataProcessor:
     def __init__(self, config: Config):
         """Initialize with configuration"""
         self.config = config
-        self.current_year = str(datetime.now().year)[2:]  # Get last two digits of year
+        self.current_year = str(datetime.now().year)[2:]
         self.quarter_columns = [f"{self.current_year}Q{i}" for i in range(1, 5)]
 
     def get_latest_forecast_file(self) -> str:
@@ -64,7 +60,7 @@ class DataProcessor:
             )
         return max(files, key=os.path.getctime)
 
-    def process_data(self) -> Tuple[SalesData, List[str]]:  # Change return type
+    def process_data(self) -> Tuple[SalesData, List[str]]:
         """Main method to process all sales data"""
         try:
             infile = self.get_latest_forecast_file()
@@ -111,10 +107,6 @@ class DataProcessor:
 
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove unnecessary columns and rows"""
-        # First print the data types and sample values for debugging
-        print("Debug - Column dtypes:", df.dtypes)
-        print("Debug - AE1 unique values before cleaning:", df["AE1"].unique())
-
         drop_columns = [
             "Active",
             "AE2",
@@ -127,21 +119,38 @@ class DataProcessor:
         # Drop specified columns and filter out TRADE sector
         df = df.drop(columns=drop_columns)
 
-        # Explicitly convert AE1 to string and clean it
-        df["AE1"] = df["AE1"].fillna("").astype(str).replace("nan", "")
+        # Fill NaN values in Sector
+        df["Sector"] = df["Sector"].fillna("Unspecified")
 
         # Convert amount columns to numeric
-        for col in df.columns:
-            if isinstance(df[col].iloc[0], (str, int, float)):
-                try:
-                    if col != "AE1":  # Don't convert AE1 column
-                        df[col] = pd.to_numeric(
-                            df[col].replace("[\$,]", "", regex=True), errors="coerce"
-                        )
-                except:
-                    pass
+        date_columns = [
+            col
+            for col in df.columns
+            if str(col).startswith(
+                (
+                    "1/",
+                    "2/",
+                    "3/",
+                    "4/",
+                    "5/",
+                    "6/",
+                    "7/",
+                    "8/",
+                    "9/",
+                    "10/",
+                    "11/",
+                    "12/",
+                )
+            )
+        ]
+        for col in date_columns:
+            try:
+                df[col] = pd.to_numeric(
+                    df[col].replace("[\$,]", "", regex=True), errors="coerce"
+                )
+            except:
+                pass
 
-        print("Debug - AE1 unique values after cleaning:", df["AE1"].unique())
         return df[df.Sector != "TRADE"]
 
     def _create_pivot(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -237,26 +246,23 @@ class DataProcessor:
         )
         timeframe = timeframe[timeframe["Amt"].notna() & (timeframe["Amt"] > 0)]
 
-        # Filter for specific AEs first
+        # Filter for active AEs using the new config structure
+        active_aes = self.config.active_aes
         timeframe = timeframe[
             timeframe["AE1"]
             .str.strip()
             .str.lower()
-            .isin(["charmaine", "worldlink", "riley"])
+            .isin([ae.lower() for ae in active_aes])
         ]
         print(f"Debug - After AE filter shape: {timeframe.shape}")
         print(f"Debug - AEs present: {timeframe['AE1'].unique()}")
-        print(f"Debug - Year_Quarters present: {timeframe['Year_Quarter'].unique()}")
 
-        # Create the summary DataFrame directly
+        # Create the summary DataFrame
         summary = (
             timeframe.groupby(["AE1", "Sector", "Customer", "Year_Quarter"])["Amt"]
             .sum()
             .reset_index()
         )
-
-        print(f"Debug - Summary shape: {summary.shape}")
-        print(f"Debug - Summary sample:\n{summary.head()}")
 
         # Create the pivot table
         pivot_table = pd.pivot_table(
@@ -267,9 +273,6 @@ class DataProcessor:
             fill_value=0,
             aggfunc="sum",
         ).reset_index()
-
-        print(f"Debug - Pivot table shape: {pivot_table.shape}")
-        print(f"Debug - Pivot table columns: {pivot_table.columns.tolist()}")
 
         # Ensure all required quarters exist
         for quarter in self.quarter_columns:
@@ -282,60 +285,8 @@ class DataProcessor:
 
         # Sort rows
         report = report.sort_values(["AE1", "Sector", "Customer"])
-
-        print(f"Debug - Final report shape: {report.shape}")
-        print(f"Debug - Final AEs: {report['AE1'].unique()}")
-        print(f"Debug - Sample of final report:\n{report.head()}")
-
+        
         return report
-
-    def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove unnecessary columns and rows"""
-        drop_columns = [
-            "Active",
-            "AE2",
-            "AE3",
-            "GrossCommission",
-            "Broker",
-            "BrokerPercent",
-        ]
-
-        # Drop specified columns and filter out TRADE sector
-        df = df.drop(columns=drop_columns)
-
-        # Fill NaN values in Sector
-        df["Sector"] = df["Sector"].fillna("Unspecified")
-
-        # Convert amount columns to numeric
-        date_columns = [
-            col
-            for col in df.columns
-            if str(col).startswith(
-                (
-                    "1/",
-                    "2/",
-                    "3/",
-                    "4/",
-                    "5/",
-                    "6/",
-                    "7/",
-                    "8/",
-                    "9/",
-                    "10/",
-                    "11/",
-                    "12/",
-                )
-            )
-        ]
-        for col in date_columns:
-            try:
-                df[col] = pd.to_numeric(
-                    df[col].replace("[\$,]", "", regex=True), errors="coerce"
-                )
-            except:
-                pass
-
-        return df[df.Sector != "TRADE"]
 
     def _create_budget_report(self, main_report: pd.DataFrame) -> pd.DataFrame:
         """Create budget and unassigned report"""
@@ -356,19 +307,20 @@ class DataProcessor:
         # Get assigned totals for non-zero rows
         assigned = main_report.groupby("AE1")[self.quarter_columns].sum().reset_index()
 
-        # Create budget rows
+        # Create budget rows using new config structure
         budget_rows = []
-        for ae_name, budget in self.config.ae_budgets.items():
-            budget_row = {
-                "AE1": ae_name,
-                "Sector": "Budget",
-                "Customer": "Budget",
-                self.quarter_columns[0]: float(budget.q1),
-                self.quarter_columns[1]: float(budget.q2),
-                self.quarter_columns[2]: float(budget.q3),
-                self.quarter_columns[3]: float(budget.q4),
-            }
-            budget_rows.append(budget_row)
+        for ae_name, ae_config in self.config.account_executives.items():
+            if ae_config.enabled:
+                budget_row = {
+                    "AE1": ae_name,
+                    "Sector": "Budget",
+                    "Customer": "Budget",
+                    self.quarter_columns[0]: float(ae_config.budgets.q1),
+                    self.quarter_columns[1]: float(ae_config.budgets.q2),
+                    self.quarter_columns[2]: float(ae_config.budgets.q3),
+                    self.quarter_columns[3]: float(ae_config.budgets.q4),
+                }
+                budget_rows.append(budget_row)
 
         # Create budget DataFrame
         budget_df = pd.DataFrame(budget_rows)
@@ -398,54 +350,6 @@ class DataProcessor:
         report = report.sort_values(["AE1", "Sector", "Customer"])
 
         return report
-
-    def _format_sheet1(self, workbook, worksheet, df: pd.DataFrame):
-        """Format Sheet1 with proper styling"""
-        row_length = len(df.index) + 2
-        table_length = f"A1:G{row_length}"
-
-        # Add formats
-        money_fmt = workbook.add_format({"num_format": 42, "align": "center"})
-        text_fmt = workbook.add_format({"align": "left"})
-
-        # Apply column formatting
-        worksheet.set_column("A:B", 15, text_fmt)
-        worksheet.set_column("C:C", 30, text_fmt)
-        worksheet.set_column("D:G", 10, money_fmt)
-
-        # Add other formatting
-        worksheet.freeze_panes(1, 0)
-        worksheet.set_zoom(90)
-
-        # Add table with proper headers
-        worksheet.add_table(
-            table_length,
-            {
-                "columns": [
-                    {"header": "AE1"},
-                    {"header": "Sector"},
-                    {"header": "Customer"},
-                    {"header": f"{self.current_year}Q1", "total_function": "sum"},
-                    {"header": f"{self.current_year}Q2", "total_function": "sum"},
-                    {"header": f"{self.current_year}Q3", "total_function": "sum"},
-                    {"header": f"{self.current_year}Q4", "total_function": "sum"},
-                ],
-                "autofilter": True,
-                "total_row": True,
-                "style": "Table Style Light 11",
-            },
-        )
-
-    def _format_sheet2(self, workbook, worksheet, df: pd.DataFrame):
-        """Format Budget-Assigned-Unassigned sheet"""
-        money_fmt = workbook.add_format({"num_format": 42, "align": "center"})
-        text_fmt = workbook.add_format({"align": "left"})
-
-        worksheet.set_column("A:B", 15, text_fmt)
-        worksheet.set_column("C:C", 30, text_fmt)
-        worksheet.set_column("D:H", 10, money_fmt)
-        worksheet.freeze_panes(1, 0)
-        worksheet.set_zoom(90)
 
     def save_report(
         self, report: pd.DataFrame, budget_unassigned: pd.DataFrame, report_folder: str

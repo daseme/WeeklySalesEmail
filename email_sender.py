@@ -27,6 +27,7 @@ class SalesStats:
 class ManagementStats:
     """Container for management rollup statistics"""
     total_revenue: float
+    total_unassigned_revenue: float
     total_customers: int
     ae_data: List[Dict]
 
@@ -43,6 +44,11 @@ class EmailSender:
     def send_report(self, ae_name: str, stats: SalesStats, report_path: str) -> bool:
         """Send email with report attachment to specified recipients"""
         try:
+            # Verify AE is enabled before sending
+            ae_config = self.config.account_executives.get(ae_name)
+            if not ae_config or not ae_config.enabled:
+                raise ValueError(f"AE {ae_name} is not enabled or doesn't exist")
+
             recipients = self._get_recipients(ae_name)
             mail = self._create_mail_object(ae_name, recipients, stats)
             self._add_attachment(mail, report_path)
@@ -91,42 +97,43 @@ class EmailSender:
         """Create mail object for individual AE report"""
         current_year = datetime.now().year
         subject = f"{ae_name} - Your {current_year} Weekly Sales Report"
-        html_content = self.template_renderer.render_sales_report(ae_name, stats)
+        html_content = Content(
+            "text/html",
+            self.template_renderer.render_sales_report(ae_name, stats)
+        )
 
         mail = Mail(
             from_email=Email(self.config.sender_email),
             subject=subject,
+            to_emails=[To(email) for email in recipients],
             html_content=html_content
         )
-
-        for recipient in recipients:
-            mail.add_to(To(recipient))
 
         return mail
 
     def _create_management_mail(self, stats: ManagementStats, recipients: List[str]) -> Mail:
         """Create mail object for management report"""
         subject = f"Weekly Sales Management Report - {datetime.now().strftime('%Y-%m-%d')}"
-        html_content = self.template_renderer.render_management_report(stats)
+        html_content = Content(
+            "text/html",
+            self.template_renderer.render_management_report(stats)
+        )
 
         mail = Mail(
             from_email=Email(self.config.sender_email),
             subject=subject,
+            to_emails=[To(email) for email in recipients],
             html_content=html_content
         )
 
-        for recipient in recipients:
-            mail.add_to(To(recipient))
-
         return mail
 
-    def _add_attachment(self, mail: Mail, file_path: str):
+    def _add_attachment(self, mail: Mail, file_path: str) -> None:
         """Add Excel file as attachment to email"""
         try:
             with open(file_path, "rb") as f:
                 data = f.read()
-
-            encoded = base64.b64encode(data).decode()
+                encoded = base64.b64encode(data).decode()
 
             attachment = Attachment()
             attachment.file_content = FileContent(encoded)

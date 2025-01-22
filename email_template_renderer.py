@@ -96,7 +96,7 @@ class EmailTemplateRenderer:
         """Format quarterly statistics cards for template"""
         result = [
             {
-                'title': f'{current_year} Quarterly Overview',
+                'title': 'Assigned Revenue',
                 'quarters': self._format_quarterly_stats(stats.quarterly_totals)
             },
             {

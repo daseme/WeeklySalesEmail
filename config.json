@@ -1,0 +1,52 @@
+{
+    "root_path": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial",
+    "reports_folder": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/reports",
+    "vba_path": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/vbaProject.bin",
+    "sendgrid_api_key": "YOUR_SENDGRID_API_KEY_HERE",
+    "sender_email": "portaladmin@crossingstv.com",
+    "test_mode": false,
+    "account_executives": {
+      "Charmaine": {
+        "enabled": true,
+        "budgets": {
+          "q1": 400194,
+          "q2": 513956,
+          "q3": 527185,
+          "q4": 600908
+        }
+      },
+      "WorldLink": {
+        "enabled": true,
+        "budgets": {
+          "q1": 126250,
+          "q2": 80360,
+          "q3": 111109,
+          "q4": 181469
+        }
+      },
+      "House": {
+        "enabled": true,
+        "budgets": {
+          "q1": 202675,
+          "q2": 293886,
+          "q3": 348144,
+          "q4": 259780
+        }
+      },
+      "National": {
+        "enabled": true,
+        "budgets": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 200264,
+          "q4": 200264
+        }
+      }
+    },
+    "management_recipients": [
+      "kurt.olmstead@crossingstv.com",
+      "daniel.sakaya@crossingstv.com", 
+      "aki.li@crossingstv.com",
+      "katherine.lynch@crossingstv.com"
+    ]
+  }

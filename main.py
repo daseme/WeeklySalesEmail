@@ -15,6 +15,53 @@ from email_sender import EmailSender
 from email_template_renderer import EmailTemplateRenderer
 from sales_analytics import SalesAnalytics
 
+def load_config(test_mode: bool = False, config_path: Optional[str] = None) -> Config:
+    """Load and configure the application configuration"""
+    # Load base configuration from JSON file
+    config_file = config_path if config_path else "config.json"
+    if not os.path.exists(config_file):
+        raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+    config = Config.load_from_json(config_file)
+    
+    # Override settings for test mode if specified
+    if test_mode:
+        config.test_mode = True
+        config.test_email = os.getenv("TEST_EMAIL", "kurt.olmstead@crossingstv.com")
+        # Update email recipients for test mode
+        config.email_recipients = {ae: [config.test_email] for ae in config.active_aes}
+        config.management_recipients = [config.test_email]
+    
+    # Validate the configuration
+    config.validate()
+    
+    return config
+
+# Parse command line arguments early
+parser = argparse.ArgumentParser(
+    description='Generate and send sales reports (Excel .xlsx format)'
+)
+parser.add_argument(
+    '-t', '--test',
+    action='store_true',
+    help='Run in test mode (sends emails only to test address)'
+)
+parser.add_argument(
+    '-c', '--config',
+    help='Path to configuration file'
+)
+
+# Get arguments without fully parsing to allow other parts to handle remaining args
+args, _ = parser.parse_known_args()
+
+# Load configuration with appropriate mode
+config = load_config(test_mode=args.test, config_path=args.config)
+
+# Display active AEs and mode
+print(f"Active Account Executives: {config.active_aes}")
+if args.test:
+    print("Running in TEST mode - emails will only be sent to test address")
+
 def setup_logging(config: Config) -> logging.Logger:
     """Configure logging for the application"""
     # Create logs directory
@@ -28,7 +75,7 @@ def setup_logging(config: Config) -> logging.Logger:
     
     # Configure logging with more detailed format
     logging.basicConfig(
-        level=logging.DEBUG if config.test_mode else logging.INFO,  # More detailed logging in test mode
+        level=logging.DEBUG if config.test_mode else logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(log_file),
@@ -39,14 +86,14 @@ def setup_logging(config: Config) -> logging.Logger:
     return logging.getLogger(__name__)
 
 def validate_environment() -> None:
-    """Validate required environment variables and Python version"""
-    required_vars = ['SENDGRID_API_KEY']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
-    if missing_vars:
-        raise EnvironmentError(
-            f"Missing required environment variables: {', '.join(missing_vars)}"
-        )
+    """Validate required environment variables"""
+    if not config.test_mode:  # Only validate in production mode
+        required_vars = ['SENDGRID_API_KEY']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            raise EnvironmentError(
+                f"Missing required environment variables: {', '.join(missing_vars)}"
+            )
 
 def verify_excel_dependencies() -> None:
     """Verify required Excel-related dependencies are installed"""
@@ -54,33 +101,26 @@ def verify_excel_dependencies() -> None:
         import pandas as pd
         import xlsxwriter
         import openpyxl
-        import jinja2  # Add Jinja2 to dependency check
+        import jinja2
     except ImportError as e:
         raise ImportError(
             "Missing required packages. Please run:\n"
             "pip install pandas xlsxwriter openpyxl jinja2"
         ) from e
 
-def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False) -> bool:
+def run_sales_report() -> bool:
     """Main function to run the sales report generation process"""
     try:
         # Verify Excel dependencies first
         verify_excel_dependencies()
         
-        # Validate environment
-        if not test_mode:
-            validate_environment()
-        
-        # Load configuration
-        config = (Config.load_from_json(config_path) if config_path 
-                 else Config.load_default(test_mode=test_mode))
-        
-        # Validate configuration
-        config.validate()
+        # Validate environment variables
+        validate_environment()
         
         # Set up logging
         logger = setup_logging(config)
-        logger.info(f"Starting sales report generation in {'TEST' if test_mode else 'PRODUCTION'} mode")
+        logger.info(f"Starting sales report generation in {'TEST' if config.test_mode else 'PRODUCTION'} mode")
+        logger.info(f"Processing reports for AEs: {config.active_aes}")
         
         # Initialize components
         logger.info("Initializing components")
@@ -95,7 +135,7 @@ def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False)
         data_processor = DataProcessor(config)
         template_renderer = EmailTemplateRenderer(templates_dir)
         email_sender = EmailSender(config, template_renderer)
-        sales_analytics = SalesAnalytics()
+        sales_analytics = SalesAnalytics(config)
         
         # Process data
         logger.info("Processing sales data")
@@ -106,7 +146,7 @@ def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False)
             for file in created_files:
                 logger.info(f"Created file: {file}")
                 if not file.endswith('.xlsx'):
-                    logger.warning(f"Unexpected file extension for {file} - should be .xlsx")
+                    logger.warning(f"Unexpected file extension for {file}")
             
             # Create mapping of AE names to report files
             reports_created = {
@@ -141,7 +181,7 @@ def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False)
                 logger.error(f"Error processing {ae_name}: {str(e)}")
                 logger.error(traceback.format_exc())
         
-        # Send management report (removed test_mode condition)
+        # Send management report
         try:
             logger.info("Generating management report")
             management_stats = sales_analytics.calculate_management_stats(sales_data.report)
@@ -170,13 +210,13 @@ def run_sales_report(config_path: Optional[str] = None, test_mode: bool = False)
             traceback.print_exc()
         return False
 
-def print_summary(start_time: datetime, success: bool, test_mode: bool) -> None:
+def print_summary(start_time: datetime, success: bool) -> None:
     """Print execution summary"""
     end_time = datetime.now()
     duration = end_time - start_time
     
     print("\nExecution Summary:")
-    print(f"Mode: {'TEST' if test_mode else 'PRODUCTION'}")
+    print(f"Mode: {'TEST' if config.test_mode else 'PRODUCTION'}")
     print(f"Status: {'SUCCESS' if success else 'FAILURE'}")
     print(f"Started at: {start_time:%Y-%m-%d %H:%M:%S}")
     print(f"Ended at: {end_time:%Y-%m-%d %H:%M:%S}")
@@ -186,45 +226,11 @@ def main():
     """Main entry point for the application"""
     start_time = datetime.now()
     
-    # Set up argument parser
-    parser = argparse.ArgumentParser(
-        description='Generate and send sales reports (Excel .xlsx format)',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=textwrap.dedent("""
-            Examples:
-              Run in production mode:
-                python main.py
-              
-              Run in test mode:
-                python main.py --test
-              
-              Run with specific config:
-                python main.py --config path/to/config.json
-              
-              Run in test mode with specific config:
-                python main.py --test --config path/to/config.json
-        """)
-    )
-    
-    parser.add_argument(
-        '-c', '--config',
-        help='Path to configuration file'
-    )
-    parser.add_argument(
-        '-t', '--test',
-        action='store_true',
-        help='Run in test mode (sends emails only to test address)'
-    )
-    
-    args = parser.parse_args()
-    
-    # Run with parsed arguments
-    if args.test:
-        print("Running in TEST mode - emails will only be sent to test address")
-    success = run_sales_report(config_path=args.config, test_mode=args.test)
+    # Run the report process
+    success = run_sales_report()
     
     # Print summary
-    print_summary(start_time, success, args.test)
+    print_summary(start_time, success)
     
     # Set exit code
     sys.exit(0 if success else 1)
