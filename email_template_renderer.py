@@ -15,16 +15,21 @@ class QuarterData:
     unassigned: float
     budget: float
     completion_percentage: float
+    previous_year_assigned: float = 0.0
+    previous_year_unassigned: float = 0.0
+    year_over_year_change: float = 0.0
 
 @dataclass
 class SalesStats:
-    """Container for sales statistics"""
     total_customers: int
     total_assigned_revenue: float
     quarterly_totals: Dict[str, float]
     avg_per_customer: float
     unassigned_totals: Dict[str, float]
     quarterly_data: List[QuarterData]
+    previous_year_customers: int = 0
+    total_previous_year_revenue: float = 0.0
+    total_year_over_year_change: float = 0.0
 
 @dataclass
 class ManagementStats:
@@ -33,6 +38,10 @@ class ManagementStats:
     total_unassigned_revenue: float
     total_customers: int
     ae_data: List[Dict]
+    total_previous_year_revenue: float = 0.0
+    total_previous_year_unassigned: float = 0.0
+    total_year_over_year_change: float = 0.0
+    previous_year_customers: int = 0
 
 class EmailTemplateRenderer:
     """Handles email template rendering with enhanced budget visualization"""
@@ -105,43 +114,40 @@ class EmailTemplateRenderer:
             raise
 
     def _format_budget_data(self, quarterly_data: List[QuarterData]) -> List[Dict]:
-        """Format quarterly budget data for template rendering
-        
-        Args:
-            quarterly_data: List of QuarterData objects containing performance metrics
-            
-        Returns:
-            List of dictionaries with formatted data for template rendering
-        """
+        """Format quarterly budget data for template rendering"""
         return [{
             'name': q.name,
             'assigned': self._format_currency(q.assigned),
+            'assigned_raw': q.assigned,  # Raw value for comparisons
             'unassigned': self._format_currency(q.unassigned),
             'budget': self._format_currency(q.budget),
             'completion_percentage': round(q.completion_percentage),
-            'bar_width': f"{round(q.completion_percentage)}%"
+            'bar_width': f"{round(q.completion_percentage)}%",
+            'previous_year_assigned': q.previous_year_assigned,  # Raw value for comparisons
+            'previous_year_assigned_display': self._format_currency(q.previous_year_assigned),
+            'year_over_year_change': q.year_over_year_change
         } for q in quarterly_data]
 
     def _calculate_totals(self, quarterly_data: List[QuarterData]) -> Dict:
-        """Calculate total values across all quarters
-        
-        Args:
-            quarterly_data: List of QuarterData objects to total
-            
-        Returns:
-            Dictionary containing formatted totals and overall completion percentage
-        """
+        """Calculate total values across all quarters"""
         total_assigned = sum(q.assigned for q in quarterly_data)
         total_unassigned = sum(q.unassigned for q in quarterly_data)
         total_budget = sum(q.budget for q in quarterly_data)
+        total_previous_year = sum(q.previous_year_assigned for q in quarterly_data)
         total_percentage = (total_assigned / total_budget * 100) if total_budget > 0 else 0
+        
+        # Calculate year-over-year change for totals
+        total_yoy_change = ((total_assigned - total_previous_year) / total_previous_year * 100) if total_previous_year > 0 else 0
         
         return {
             'assigned': self._format_currency(total_assigned),
             'unassigned': self._format_currency(total_unassigned),
             'budget': self._format_currency(total_budget),
             'completion_percentage': round(total_percentage),
-            'bar_width': f"{round(total_percentage)}%"
+            'bar_width': f"{round(total_percentage)}%",
+            'previous_year_assigned': total_previous_year,  # Raw value for comparisons
+            'previous_year_assigned_display': self._format_currency(total_previous_year),
+            'year_over_year_change': total_yoy_change
         }
     
     def _format_ae_data(self, ae_data: List[Dict]) -> List[Dict]:
@@ -152,22 +158,35 @@ class EmailTemplateRenderer:
             total_budget = sum(quarter['budget'] for quarter in ae['quarters'])
             total_unassigned = sum(quarter['unassigned'] for quarter in ae['quarters'])
             total_completion_percentage = round((ae['total_assigned_revenue'] / total_budget * 100) if total_budget > 0 else 0)
-            avg_per_customer = round(ae['total_assigned_revenue'] / ae['total_customers']) if ae['total_customers'] > 0 else 0
 
             formatted_ae = {
                 'name': ae['name'],
-                'total_assigned_revenue': self._format_currency(ae['total_assigned_revenue']),
+                # Raw values for comparisons
+                'total_assigned_revenue_raw': ae['total_assigned_revenue'],
+                'previous_year_revenue_raw': ae.get('total_previous_year_revenue', 0),
+                'year_over_year_change': ae.get('total_year_over_year_change', 0),
                 'total_customers': ae['total_customers'],
-                'avg_per_customer': self._format_currency(avg_per_customer),
+                'previous_year_customers': ae.get('previous_year_customers', 0),
+                # Formatted values for display
+                'total_assigned_revenue': self._format_currency(ae['total_assigned_revenue']),
+                'avg_per_customer': self._format_currency(ae['total_assigned_revenue'] / ae['total_customers'] if ae['total_customers'] > 0 else 0),
                 'total_unassigned': self._format_currency(total_unassigned),
                 'total_budget': self._format_currency(total_budget),
+                'previous_year_revenue': self._format_currency(ae.get('total_previous_year_revenue', 0)),
                 'total_completion_percentage': total_completion_percentage,
                 'quarters': [
                     {
                         'name': quarter['name'],
+                        # Raw values for comparisons
+                        'assigned_raw': quarter['assigned'],
+                        'previous_year_assigned_raw': quarter.get('previous_year_assigned', 0),
+                        'year_over_year_change': quarter.get('year_over_year_change', 0),
+                        # Formatted values for display
                         'assigned': self._format_currency(quarter['assigned']),
                         'unassigned': self._format_currency(quarter['unassigned']),
                         'budget': self._format_currency(quarter['budget']),
+                        'previous_year_assigned': self._format_currency(quarter.get('previous_year_assigned', 0)),
+                        'previous_year_unassigned': self._format_currency(quarter.get('previous_year_unassigned', 0)),
                         'completion_percentage': round((quarter['assigned'] / quarter['budget'] * 100) if quarter['budget'] > 0 else 0)
                     }
                     for quarter in ae['quarters']
@@ -177,18 +196,7 @@ class EmailTemplateRenderer:
         return formatted_data
 
     def render_sales_report(self, ae_name: str, stats: SalesStats) -> str:
-        """Render the sales report email template with enhanced budget visualization
-        
-        Args:
-            ae_name: Name of the Account Executive
-            stats: SalesStats object containing performance metrics
-            
-        Returns:
-            Rendered HTML content as string
-            
-        Raises:
-            Exception: For template rendering errors
-        """
+        """Render the sales report email template with enhanced budget visualization"""
         try:
             self.logger.debug(f"Starting template render for AE: {ae_name}")
             template = self.env.get_template('sales_report.html')
@@ -205,7 +213,12 @@ class EmailTemplateRenderer:
                 'overview_stats': {
                     'total_customers': stats.total_customers,
                     'total_assigned': self._format_currency(stats.total_assigned_revenue),
-                    'avg_per_customer': self._format_currency(stats.avg_per_customer)
+                    'total_assigned_raw': stats.total_assigned_revenue,  # Raw value for comparisons
+                    'avg_per_customer': self._format_currency(stats.avg_per_customer),
+                    'previous_year_customers': stats.previous_year_customers,
+                    'total_previous_year_revenue_display': self._format_currency(stats.total_previous_year_revenue),
+                    'total_previous_year_revenue': stats.total_previous_year_revenue,  # Raw value for comparisons
+                    'total_year_over_year_change': stats.total_year_over_year_change
                 },
                 'css_styles': self.css_styles,
                 'logo_base64': self.logo_base64
@@ -223,22 +236,25 @@ class EmailTemplateRenderer:
         try:
             template = self.env.get_template('management_report.html')
             
-            # Add debug logging
-            self.logger.debug(f"AE Data being passed to template: {stats.ae_data}")
-            
             context = {
                 'report_date': datetime.now().strftime('%Y-%m-%d'),
+                # Raw values for comparisons
+                'total_previous_year_revenue_raw': stats.total_previous_year_revenue,
+                'total_previous_year_unassigned_raw': stats.total_previous_year_unassigned,
+                'total_year_over_year_change': stats.total_year_over_year_change,
+                'previous_year_customers': stats.previous_year_customers,
+                # Formatted values for display
                 'total_revenue': self._format_currency(stats.total_revenue),
                 'total_unassigned_revenue': self._format_currency(stats.total_unassigned_revenue),
                 'total_customers': stats.total_customers,
-                'ae_data': self._format_ae_data(stats.ae_data),  # Make sure this contains the expected data
+                'total_previous_year_revenue': self._format_currency(stats.total_previous_year_revenue),
+                'total_previous_year_unassigned': self._format_currency(stats.total_previous_year_unassigned),
+                'ae_data': self._format_ae_data(stats.ae_data),
                 'logo_base64': self.logo_base64
             }
             
-            self.logger.debug(f"Formatted AE Data: {context['ae_data']}")
-            
             return template.render(**context)
-            
+                
         except Exception as e:
             self.logger.error(f"Error rendering management template: {str(e)}")
             self.logger.error(traceback.format_exc())

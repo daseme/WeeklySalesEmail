@@ -155,49 +155,56 @@ class DataProcessor:
 
     def _create_pivot(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create pivot table from cleaned data"""
-        print("Debug - AE1 values before pivot:", df["AE1"].unique())
-
+        print("\n=== PIVOT DEBUG ===")
+        print(f"1. Shape before pivot: {df.shape}")
+        
         # Define columns to keep as is
         id_vars = [
-            "Customer",
-            "Market",
-            "Revenue Class",
-            "AE1",
-            "BrokerName",
-            "Agency",
-            "AgencyPercent",
-            "Sector",
+            "Customer", "Market", "Revenue Class", "AE1", 
+            "BrokerName", "Agency", "AgencyPercent", "Sector"
         ]
 
-        # Find date columns
-        date_columns = [
-            col
-            for col in df.columns
-            if isinstance(col, str)
-            and any(str(col).startswith(str(i) + "/") for i in range(1, 13))
-        ]
-
-        print(f"Debug - Found {len(date_columns)} date columns")
+        # Find date columns for both years
+        current_year = datetime.now().year
+        previous_year = current_year - 1
+        
+        date_columns = []
+        for year in [previous_year, current_year]:
+            for month in range(1, 13):
+                col = f"{month}/1/{year}"
+                if col in df.columns:
+                    date_columns.append(col)
+        
+        print(f"2. Found {len(date_columns)} date columns")
+        print(f"3. Sample date columns: {date_columns[:5]}")
 
         # Create pivot
         df_subset = df[id_vars + date_columns].copy()
-        print("Debug - AE1 values in subset:", df_subset["AE1"].unique())
+        print(f"4. Subset shape: {df_subset.shape}")
 
         df_pivot = pd.melt(
-            df_subset, id_vars=id_vars, var_name="Date", value_name="Amt"
+            df_subset, 
+            id_vars=id_vars, 
+            var_name="Date", 
+            value_name="Amt"
         )
-
-        print("Debug - AE1 values after melt:", df_pivot["AE1"].unique())
 
         # Convert to datetime and add derived columns
         df_pivot["Date"] = pd.to_datetime(df_pivot["Date"])
         df_pivot["Quarter"] = df_pivot["Date"].dt.quarter
         df_pivot["Year"] = df_pivot["Date"].dt.year
+        
+        # Create year-specific quarter names (e.g., "24Q1", "25Q1")
         df_pivot["Year_Quarter"] = (
-            df_pivot["Year"].map(str).str[2:4] + "Q" + df_pivot["Quarter"].map(str)
+            df_pivot["Year"].astype(str).str[-2:] + 
+            "Q" + 
+            df_pivot["Quarter"].astype(str)
         )
 
-        print("Debug - Final AE1 values in pivot:", df_pivot["AE1"].unique())
+        print("\n5. Final pivot info:")
+        print(f"Shape: {df_pivot.shape}")
+        print("Year quarters present:", sorted(df_pivot["Year_Quarter"].unique()))
+        
         return df_pivot
 
     def _clean_currency(self, value) -> float:
@@ -211,42 +218,62 @@ class DataProcessor:
         return float(value) if value else 0.0
 
     def _filter_timeframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Filter data for current year and positive amounts"""
-        print("Debug - AE1 values before timeframe filter:", df["AE1"].unique())
-
+        """Filter data for current and previous year with positive amounts"""
+        print("\n=== DETAILED TIMEFRAME DEBUG ===")
+        print(f"1. Initial shape: {df.shape}")
+        
+        # Show date range
+        print(f"2. Date range: {df['Date'].min()} to {df['Date'].max()}")
+        print(f"3. Years present: {sorted(df['Date'].dt.year.unique())}")
+        
+        # Show data by year before filtering
+        print("\n4. Rows per year before filtering:")
+        year_counts = df.groupby(df['Date'].dt.year).size()
+        print(year_counts)
+        
+        # Show non-zero amounts by year
+        print("\n5. Non-zero amounts by year:")
+        nonzero = df[df["Amt"] > 0].groupby(df['Date'].dt.year).size()
+        print(nonzero)
+        
         current_year = datetime.now().year
-
-        # Clean and convert amount column
-        df["Amt"] = df["Amt"].apply(self._clean_currency)
-
-        # Filter the data
-        filtered_df = df[
-            (df["Date"].dt.year == current_year)  # Changed to exact year match
-            & (df["Amt"] > 0)
-        ]
-
-        print("Debug - AE1 values after timeframe filter:", filtered_df["AE1"].unique())
-        print(f"Debug - Year_Quarter values: {filtered_df['Year_Quarter'].unique()}")
+        previous_year = current_year - 1
+        
+        # After year filter but before amount filter
+        year_filtered = df[df["Date"].dt.year.isin([current_year, previous_year])]
+        print(f"\n6. After year filter (before amount filter): {year_filtered.shape}")
+        
+        # After both filters
+        filtered_df = year_filtered[year_filtered["Amt"] > 0]
+        print(f"7. After amount filter: {filtered_df.shape}")
+        
+        print("\n8. Sample of data:")
+        print(filtered_df[["Date", "AE1", "Amt"]].head())
+        
         return filtered_df
 
     def _create_main_report(self, timeframe: pd.DataFrame) -> pd.DataFrame:
         """Create the main sales report with proper filtering of empty rows"""
+        print("\n=== Main Report Creation Debug ===")
+        print(f"1. Initial timeframe shape: {timeframe.shape}")
+        print(f"2. Year_Quarter values present: {sorted(timeframe['Year_Quarter'].unique())}")
+        
         # Create a copy to avoid SettingWithCopyWarning
         timeframe = timeframe.copy()
-        print(f"Debug - Initial shape: {timeframe.shape}")
-
+        
         # Fill NaN values with appropriate defaults
         timeframe["Customer"] = timeframe["Customer"].fillna("Unspecified Customer")
         timeframe["Sector"] = timeframe["Sector"].fillna("Unspecified Sector")
         timeframe["AE1"] = timeframe["AE1"].fillna("")
-
+        
         # Clean the Amt column
         timeframe["Amt"] = pd.to_numeric(
-            timeframe["Amt"].replace("[\$,]", "", regex=True), errors="coerce"
+            timeframe["Amt"].replace("[\$,]", "", regex=True), 
+            errors="coerce"
         )
         timeframe = timeframe[timeframe["Amt"].notna() & (timeframe["Amt"] > 0)]
-
-        # Filter for active AEs using the new config structure
+        
+        # Filter for active AEs
         active_aes = self.config.active_aes
         timeframe = timeframe[
             timeframe["AE1"]
@@ -254,17 +281,19 @@ class DataProcessor:
             .str.lower()
             .isin([ae.lower() for ae in active_aes])
         ]
-        print(f"Debug - After AE filter shape: {timeframe.shape}")
-        print(f"Debug - AEs present: {timeframe['AE1'].unique()}")
-
+        
+        print(f"3. After AE filtering: {timeframe.shape}")
+        
         # Create the summary DataFrame
         summary = (
             timeframe.groupby(["AE1", "Sector", "Customer", "Year_Quarter"])["Amt"]
             .sum()
             .reset_index()
         )
-
-        # Create the pivot table
+        
+        print("4. Unique Year_Quarters in summary:", sorted(summary["Year_Quarter"].unique()))
+        
+        # Create the pivot table - MODIFIED to keep both years
         pivot_table = pd.pivot_table(
             summary,
             values="Amt",
@@ -273,20 +302,28 @@ class DataProcessor:
             fill_value=0,
             aggfunc="sum",
         ).reset_index()
-
-        # Ensure all required quarters exist
-        for quarter in self.quarter_columns:
-            if quarter not in pivot_table.columns:
-                pivot_table[quarter] = 0
-
-        # Sort columns
-        final_columns = ["AE1", "Sector", "Customer"] + self.quarter_columns
-        report = pivot_table.reindex(columns=final_columns, fill_value=0)
-
-        # Sort rows
-        report = report.sort_values(["AE1", "Sector", "Customer"])
         
-        return report
+        print("5. Final columns:", pivot_table.columns.tolist())
+        
+        # Ensure all required quarters exist
+        all_quarters = []
+        current_year = str(datetime.now().year)[2:]
+        previous_year = str(int(current_year) - 1)
+        
+        for year in [previous_year, current_year]:
+            for q in range(1, 5):
+                quarter = f"{year}Q{q}"
+                all_quarters.append(quarter)
+                if quarter not in pivot_table.columns:
+                    pivot_table[quarter] = 0
+        
+        # Sort columns to ensure consistent order
+        final_columns = ["AE1", "Sector", "Customer"] + sorted(all_quarters)
+        report = pivot_table.reindex(columns=final_columns, fill_value=0)
+        
+        print("6. Final report columns:", report.columns.tolist())
+        
+        return report.sort_values(["AE1", "Sector", "Customer"])
 
     def _create_budget_report(self, main_report: pd.DataFrame) -> pd.DataFrame:
         """Create budget and unassigned report"""
