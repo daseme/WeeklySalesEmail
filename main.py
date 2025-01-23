@@ -15,6 +15,17 @@ from email_sender import EmailSender
 from email_template_renderer import EmailTemplateRenderer
 from sales_analytics import SalesAnalytics
 
+# After the imports but before the config loading
+
+# Load environment variables
+load_dotenv()
+print(f"Loaded .env file: SENDGRID_API_KEY length = {len(os.getenv('SENDGRID_API_KEY', ''))}")
+
+# Parse command line arguments early
+parser = argparse.ArgumentParser(
+    description='Generate and send sales reports (Excel .xlsx format)'
+)
+
 def load_config(test_mode: bool = False, config_path: Optional[str] = None) -> Config:
     """Load and configure the application configuration"""
     # Load base configuration from JSON file
@@ -82,6 +93,9 @@ def setup_logging(config: Config) -> logging.Logger:
             logging.StreamHandler(sys.stdout)
         ]
     )
+    
+    # Set higher log level for SendGrid client to avoid payload logging
+    logging.getLogger('python_http_client').setLevel(logging.INFO)
     
     return logging.getLogger(__name__)
 

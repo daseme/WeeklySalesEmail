@@ -1,28 +1,9 @@
 from typing import Dict, List
-from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
 from config import Config
-
-
-@dataclass
-class SalesStats:
-    """Container for sales statistics"""
-    total_customers: int
-    total_assigned_revenue: float
-    quarterly_totals: Dict[str, float]
-    avg_per_customer: float
-    unassigned_totals: Dict[str, float]
-
-
-@dataclass
-class ManagementStats:
-    """Container for management rollup statistics"""
-    total_revenue: float
-    total_unassigned_revenue: float
-    total_customers: int
-    ae_data: List[Dict]
-
+# Import the data structures directly from email_template_renderer
+from email_template_renderer import QuarterData, SalesStats, ManagementStats
 
 class SalesAnalytics:
     """Handles sales data analysis"""
@@ -34,19 +15,7 @@ class SalesAnalytics:
         self.quarter_columns = [f"{self.current_year}Q{q}" for q in range(1, 5)]
 
     def calculate_sales_stats(self, sales_data_df: pd.DataFrame, ae_name: str) -> SalesStats:
-        """
-        Calculate sales statistics for an AE
-
-        Args:
-            sales_data_df: DataFrame containing sales data
-            ae_name: Name of the Account Executive
-
-        Returns:
-            SalesStats object with calculated statistics
-
-        Raises:
-            ValueError: If AE is not enabled or doesn't exist
-        """
+        """Calculate enhanced sales statistics for an AE"""
         # Verify AE is enabled
         ae_config = self.config.account_executives.get(ae_name)
         if not ae_config or not ae_config.enabled:
@@ -57,53 +26,78 @@ class SalesAnalytics:
         for col in self.quarter_columns:
             ae_data[col] = pd.to_numeric(ae_data[col], errors='coerce').fillna(0)
 
-        # Calculate quarterly totals for assigned revenue
-        assigned_data = ae_data[ae_data['Sector'] != 'AAA - UNASSIGNED']
-        quarterly_totals = {
-            col: assigned_data[col].sum()
-            for col in self.quarter_columns
-        }
+        # Calculate quarterly data
+        quarterly_data = []
+        total_assigned = 0
+        total_unassigned = 0
+        total_budget = 0
 
-        # Calculate quarterly totals for unassigned revenue
-        unassigned_data = ae_data[ae_data['Sector'] == 'AAA - UNASSIGNED']
-        unassigned_totals = {
-            col: unassigned_data[col].sum()
-            for col in self.quarter_columns
-        }
+        quarterly_totals = {}
+        unassigned_totals = {}
 
-        # Calculate other stats
-        total_customers = len(assigned_data['Customer'].unique())
-        total_assigned_revenue = sum(quarterly_totals.values())
-        avg_per_customer = total_assigned_revenue / total_customers if total_customers > 0 else 0
+        for q in range(1, 5):
+            quarter_col = f"{self.current_year}Q{q}"
+            budget_value = float(getattr(ae_config.budgets, f'q{q}'))
+            
+            # Calculate assigned and unassigned revenue
+            assigned_revenue = ae_data[
+                (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
+                (ae_data[quarter_col] > 0)
+            ][quarter_col].sum()
+            
+            unassigned_revenue = ae_data[
+                (ae_data['Sector'] == 'AAA - UNASSIGNED') & 
+                (ae_data[quarter_col] > 0)
+            ][quarter_col].sum()
+
+            # Calculate completion percentage
+            completion_percentage = (assigned_revenue / budget_value * 100) if budget_value > 0 else 0
+
+            quarterly_data.append(QuarterData(
+                name=f"Q{q} {self.current_year}",
+                assigned=assigned_revenue,
+                unassigned=unassigned_revenue,
+                budget=budget_value,
+                completion_percentage=completion_percentage
+            ))
+
+            # Update totals
+            total_assigned += assigned_revenue
+            total_unassigned += unassigned_revenue
+            total_budget += budget_value
+            
+            # Store quarterly values for the old format
+            quarterly_totals[quarter_col] = assigned_revenue
+            unassigned_totals[quarter_col] = unassigned_revenue
+
+        # Calculate customer stats
+        total_customers = len(ae_data[
+            (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
+            (ae_data[self.quarter_columns].sum(axis=1) > 0)
+        ]['Customer'].unique())
+
+        avg_per_customer = total_assigned / total_customers if total_customers > 0 else 0
 
         return SalesStats(
             total_customers=total_customers,
-            total_assigned_revenue=total_assigned_revenue,
+            total_assigned_revenue=total_assigned,
             quarterly_totals=quarterly_totals,
             avg_per_customer=avg_per_customer,
-            unassigned_totals=unassigned_totals
+            unassigned_totals=unassigned_totals,
+            quarterly_data=quarterly_data
         )
 
     def calculate_management_stats(self, sales_data: pd.DataFrame) -> ManagementStats:
-        """
-        Calculate management level statistics
-
-        Args:
-            sales_data: DataFrame containing all sales data
-
-        Returns:
-            ManagementStats object with calculated statistics
-        """
+        """Calculate management level statistics"""
         # Create a copy of the data and ensure numeric values
         df = sales_data.copy()
         for col in self.quarter_columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-        # Split data into assigned and unassigned
+        # Calculate overall totals
         assigned_data = df[df['Sector'] != 'AAA - UNASSIGNED']
         unassigned_data = df[df['Sector'] == 'AAA - UNASSIGNED']
 
-        # Calculate totals
         total_revenue = assigned_data[self.quarter_columns].sum().sum()
         total_unassigned_revenue = unassigned_data[self.quarter_columns].sum().sum()
         total_customers = len(assigned_data['Customer'].unique())
@@ -115,18 +109,40 @@ class SalesAnalytics:
                 continue
 
             try:
+                # Get stats for this AE
                 ae_stats = self.calculate_sales_stats(df, ae_name)
                 
-                ae_quarters = [
-                    {
-                        'name': f'Q{q}',
-                        'assigned': ae_stats.quarterly_totals[f'{self.current_year}Q{q}'],
-                        'unassigned': ae_stats.unassigned_totals[f'{self.current_year}Q{q}'],
-                        'budget': getattr(ae_config.budgets, f'q{q}')
-                    }
-                    for q in range(1, 5)
-                ]
+                # Process quarterly data
+                ae_quarters = []
+                for q in range(1, 5):
+                    quarter_col = f"{self.current_year}Q{q}"
+                    budget_value = float(getattr(ae_config.budgets, f'q{q}'))
+                    
+                    # Find the matching quarter data
+                    quarter_stats = next(
+                        (qd for qd in ae_stats.quarterly_data if qd.name == f"Q{q} {self.current_year}"),
+                        None
+                    )
+                    
+                    if quarter_stats:
+                        ae_quarters.append({
+                            'name': f"Q{q}",
+                            'assigned': quarter_stats.assigned,
+                            'unassigned': quarter_stats.unassigned,
+                            'budget': budget_value,
+                            'completion_percentage': round((quarter_stats.assigned / budget_value * 100) if budget_value > 0 else 0)
+                        })
+                    else:
+                        # Fallback if quarter not found
+                        ae_quarters.append({
+                            'name': f"Q{q}",
+                            'assigned': 0,
+                            'unassigned': 0,
+                            'budget': budget_value,
+                            'completion_percentage': 0
+                        })
 
+                # Add AE's data to the list
                 ae_data.append({
                     'name': ae_name,
                     'total_assigned_revenue': ae_stats.total_assigned_revenue,

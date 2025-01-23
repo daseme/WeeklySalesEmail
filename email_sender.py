@@ -33,13 +33,13 @@ class ManagementStats:
 
 
 class EmailSender:
-    """Handles email creation and sending operations"""
-
     def __init__(self, config: Config, template_renderer: EmailTemplateRenderer):
         """Initialize with configuration and template renderer"""
         self.config = config
         self.template_renderer = template_renderer
-        self.sg = sendgrid.SendGridAPIClient(api_key=config.sendgrid_api_key)
+        api_key = config.sendgrid_api_key
+        print(f"API Key starts with: {api_key[:5]}... and is {len(api_key)} characters long")  # Safe way to debug
+        self.sg = sendgrid.SendGridAPIClient(api_key=api_key)
 
     def send_report(self, ae_name: str, stats: SalesStats, report_path: str) -> bool:
         """Send email with report attachment to specified recipients"""
@@ -68,6 +68,10 @@ class EmailSender:
         """Send management rollup report"""
         try:
             recipients = self.config.management_recipients
+            if isinstance(recipients, list) and len(recipients) == 1:
+                # Split the comma-separated string into a list of emails
+                recipients = recipients[0].split(',')
+
             if not recipients:
                 raise ValueError("No management recipients configured")
 
