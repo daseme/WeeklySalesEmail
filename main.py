@@ -177,23 +177,67 @@ def run_sales_report() -> bool:
         total_reports = len(reports_created)
         
         logger.info(f"Sending {total_reports} reports")
-        for ae_name, report_path in reports_created.items():
-            try:
-                logger.info(f"Processing report for {ae_name}")
-                
-                # Calculate stats
-                stats = sales_analytics.calculate_sales_stats(sales_data.report, ae_name)
-                
-                # Send email
-                if email_sender.send_report(ae_name, stats, report_path):
-                    success_count += 1
-                    logger.info(f"Successfully sent report to {ae_name}")
-                else:
-                    logger.error(f"Failed to send email to {ae_name}")
+        
+        # If in test mode, prompt the user to select an AE
+        if config.test_mode:
+            print("\n=== TEST MODE ===")
+            print("Please select an Account Executive (AE) to generate and send a report for:")
+            
+            # Display a list of active AEs with numbers
+            for i, ae_name in enumerate(config.active_aes, start=1):
+                print(f"{i}. {ae_name}")
+            
+            # Prompt the user to select an AE
+            while True:
+                try:
+                    selection = int(input("Enter the number of the AE: "))
+                    if 1 <= selection <= len(config.active_aes):
+                        ae_name = config.active_aes[selection - 1]
+                        break
+                    else:
+                        print("Invalid selection. Please enter a number from the list.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+            
+            # Get the report path for the selected AE
+            report_path = reports_created.get(ae_name)
+            
+            if report_path:
+                try:
+                    logger.info(f"Processing report for {ae_name} (TEST MODE)")
                     
-            except Exception as e:
-                logger.error(f"Error processing {ae_name}: {str(e)}")
-                logger.error(traceback.format_exc())
+                    # Calculate stats
+                    stats = sales_analytics.calculate_sales_stats(sales_data.report, ae_name)
+                    
+                    # Send email
+                    if email_sender.send_report(ae_name, stats, report_path):
+                        success_count += 1
+                        logger.info(f"Successfully sent report to {ae_name} (TEST MODE)")
+                    else:
+                        logger.error(f"Failed to send email to {ae_name} (TEST MODE)")
+                        
+                except Exception as e:
+                    logger.error(f"Error processing {ae_name} (TEST MODE): {str(e)}")
+                    logger.error(traceback.format_exc())
+        else:
+            # In production mode, send all reports
+            for ae_name, report_path in reports_created.items():
+                try:
+                    logger.info(f"Processing report for {ae_name}")
+                    
+                    # Calculate stats
+                    stats = sales_analytics.calculate_sales_stats(sales_data.report, ae_name)
+                    
+                    # Send email
+                    if email_sender.send_report(ae_name, stats, report_path):
+                        success_count += 1
+                        logger.info(f"Successfully sent report to {ae_name}")
+                    else:
+                        logger.error(f"Failed to send email to {ae_name}")
+                        
+                except Exception as e:
+                    logger.error(f"Error processing {ae_name}: {str(e)}")
+                    logger.error(traceback.format_exc())
         
         # Send management report
         try:

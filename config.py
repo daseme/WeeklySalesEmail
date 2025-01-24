@@ -101,46 +101,38 @@ class Config:
 
         # Load AEs and their budgets
         account_executives = {}
-        for name, ae_data in config_data["account_executives"].items():
-            account_executives[name] = AccountExecutive(
-                enabled=ae_data["enabled"],
-                budgets=AEBudget(**ae_data["budgets"])
-            )
+        if "account_executives" in config_data:  # Add this check
+            for name, ae_data in config_data["account_executives"].items():
+                account_executives[name] = AccountExecutive(
+                    enabled=ae_data["enabled"],
+                    budgets=AEBudget(**ae_data["budgets"])
+                )
 
-        # Load email recipients
-        email_recipients = cls._load_email_recipients([
-            name for name, ae in account_executives.items() if ae.enabled
-        ])
-
-        # Handle test mode
-        test_mode = config_data.get("test_mode", False)
-        test_email = os.getenv("TEST_EMAIL", "kurt.olmstead@crossingstv.com")
-        
-        # Set management recipients based on test mode
-        management_recipients = (
-            [test_email] if test_mode 
-            else config_data.get("management_recipients", [])
-        )
-
-        return cls(
-            root_path=config_data["root_path"],
-            reports_folder=config_data["reports_folder"],
-            vba_path=config_data["vba_path"],
+        # Create instance
+        instance = cls(
+            root_path=config_data.get("root_path", ""),
+            reports_folder=config_data.get("reports_folder", ""),
+            vba_path=config_data.get("vba_path", ""),
             sendgrid_api_key=os.getenv("SENDGRID_API_KEY", ""),
             sender_email=os.getenv("SENDER_EMAIL", "portaladmin@crossingstv.com"),
-            email_recipients=email_recipients,
-            management_recipients=management_recipients,
+            email_recipients={},
+            management_recipients=config_data.get("management_recipients", []),
             account_executives=account_executives,
-            test_mode=test_mode,
-            test_email=test_email
+            test_mode=config_data.get("test_mode", False),
+            test_email=os.getenv("TEST_EMAIL", "test@example.com")
         )
 
-    @staticmethod
-    def _load_email_recipients(ae_list: List[str]) -> Dict[str, List[str]]:
+        # Load email recipients for enabled AEs
+        enabled_aes = [name for name, ae in account_executives.items() if ae.enabled]
+        instance.email_recipients = instance._load_email_recipients(enabled_aes)  # This should work now
+
+        return instance
+    
+    def _load_email_recipients(self, ae_list: List[str]) -> Dict[str, List[str]]:
         """Load email recipients from environment variables"""
         email_recipients = {}
         for ae in ae_list:
-            env_key = f"AE_EMAILS_{ae.upper()}"
+            env_key = f"AE_EMAILS_{ae.upper().replace(' ', '_')}"
             emails_str = os.getenv(env_key, "")
             if emails_str:
                 email_recipients[ae] = [email.strip() for email in emails_str.split(",")]

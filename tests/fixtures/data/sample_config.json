@@ -1,0 +1,27 @@
+{
+    "root_path": "/test/path",
+    "reports_folder": "/test/reports",
+    "vba_path": "/test/vba.bas",
+    "account_executives": {
+        "John Doe": {
+            "enabled": true,
+            "budgets": {
+                "q1": 100000,
+                "q2": 200000,
+                "q3": 300000,
+                "q4": 400000
+            }
+        },
+        "Jane Smith": {
+            "enabled": false,
+            "budgets": {
+                "q1": 150000,
+                "q2": 250000,
+                "q3": 350000,
+                "q4": 450000
+            }
+        }
+    },
+    "management_recipients": ["manager@example.com"],
+    "test_mode": false
+}
