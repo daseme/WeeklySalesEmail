@@ -190,7 +190,23 @@ class EmailTemplateRenderer:
                         'completion_percentage': round((quarter['assigned'] / quarter['budget'] * 100) if quarter['budget'] > 0 else 0)
                     }
                     for quarter in ae['quarters']
-                ]
+                ],
+                # Add annual totals with both raw and formatted values
+                'annual_totals': {
+                    'name': 'Annual Total',
+                    # Raw values for comparisons
+                    'assigned_raw': ae['total_assigned_revenue'],
+                    'unassigned_raw': total_unassigned,
+                    'budget_raw': total_budget,
+                    'previous_year_assigned_raw': ae.get('total_previous_year_revenue', 0),
+                    'year_over_year_change': ae.get('total_year_over_year_change', 0),
+                    # Formatted values for display
+                    'assigned': self._format_currency(ae['total_assigned_revenue']),
+                    'unassigned': self._format_currency(total_unassigned),
+                    'budget': self._format_currency(total_budget),
+                    'previous_year_assigned': self._format_currency(ae.get('total_previous_year_revenue', 0)),
+                    'completion_percentage': round((ae['total_assigned_revenue'] / total_budget * 100) if total_budget > 0 else 0)
+                }
             }
             formatted_data.append(formatted_ae)
         return formatted_data

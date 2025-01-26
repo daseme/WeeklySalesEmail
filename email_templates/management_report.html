@@ -116,6 +116,23 @@
             <td style="text-align: right; padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4b5563; font-family: monospace; font-size: 14px;">${{ quarter.budget }}</td>
           </tr>
           {% endfor %}
+          <!-- After quarterly rows -->
+          <tr style="background-color: #f1f5f9; font-weight: 600;">
+            <td style="padding: 12px; border-bottom: 2px solid #e2e8f0; color: #1f2937;">{{ ae.annual_totals.name }}</td>
+            <td style="padding: 8px 12px; border-bottom: 2px solid #e2e8f0;">
+              <div style="width: 100%; height: 24px; background: #e2e8f0; position: relative; border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; background: #2563eb; position: absolute; left: 0; top: 0; width: {{ ae.annual_totals.completion_percentage }}%;">
+                  <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #ffffff; font-weight: 600; font-size: 12px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);">{{ ae.annual_totals.completion_percentage }}%</span>
+                </div>
+              </div>
+            </td>
+            <td style="text-align: right; padding: 12px; border-bottom: 2px solid #e2e8f0; color: #1f2937; font-family: monospace; font-size: 14px;">${{ ae.annual_totals.assigned }}</td>
+            <td style="text-align: right; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: monospace; font-size: 14px; {% if ae.annual_totals.year_over_year_change > 0 %}color: #059669{% else %}color: #dc2626{% endif %}">
+              {{ ae.annual_totals.year_over_year_change > 0 and '+' or '' }}{{ ae.annual_totals.year_over_year_change | round }}%
+            </td>
+            <td style="text-align: right; padding: 12px; border-bottom: 2px solid #e2e8f0; color: #1f2937; font-family: monospace; font-size: 14px;">${{ ae.annual_totals.unassigned }}</td>
+            <td style="text-align: right; padding: 12px; border-bottom: 2px solid #e2e8f0; color: #1f2937; font-family: monospace; font-size: 14px;">${{ ae.annual_totals.budget }}</td>
+          </tr>
         </tbody>
       </table>
     </td>
