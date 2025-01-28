@@ -223,7 +223,7 @@ class EmailTemplateRenderer:
             
             context = {
                 'ae_name': ae_name,
-                'report_date': datetime.now().strftime('%Y-%m-%d'),
+                'report_date': datetime.now().strftime('%m-%d-%Y'),
                 'quarters': formatted_quarters,
                 'totals': totals,
                 'overview_stats': {
@@ -253,7 +253,7 @@ class EmailTemplateRenderer:
             template = self.env.get_template('management_report.html')
             
             context = {
-                'report_date': datetime.now().strftime('%Y-%m-%d'),
+                'report_date': datetime.now().strftime('%m-%d-%Y'),
                 # Raw values for comparisons
                 'total_previous_year_revenue_raw': stats.total_previous_year_revenue,
                 'total_previous_year_unassigned_raw': stats.total_previous_year_unassigned,
