@@ -2,111 +2,35 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Management Report</title>
-    <style>
-      body, table, td {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-    }
-    table {
-        border-collapse: collapse;
-    }
-    .header-container {
-      width: 100%;  /* Ensure full width */
-      max-width: 900px;  /* Match container */
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2b6cb0;
-      color: white;
-      padding: 20px;
-      box-sizing: border-box; /* Ensures padding doesn't expand width */
-  }
-  
-  .header-title {
-      font-size: 22px;
-      font-weight: bold;
-      margin: 0;
-      flex: 1;  /* Pushes the logo to the right */
-  }
-  .header-logo {
-      display: flex;
-      justify-content: flex-end;
-  }
-  .header-logo img {
-      width: 100px;
-      height: 100px;
-  }
-  .container {
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      background: white;
-  }
-  
-  
-    .section {
-        padding: 20px;
-        border-bottom: 2px solid #e2e8f0;
-    }
-    .table-responsive {
-        width: 100%;
-    }
-    .table-responsive th {
-        background: #f8fafc;
-        text-align: left;
-        padding: 10px;
-        border-bottom: 2px solid #e2e8f0;
-    }
-    .table-responsive td {
-        padding: 10px;
-        border-bottom: 1px solid #e2e8f0;
-    }
-    .highlight {
-        background: #f1f5f9;
-        font-weight: bold;
-    }
-    .progress-bar {
-        background: #e2e8f0;
-        width: 100%;
-        height: 24px;
-        border-radius: 4px;
-        position: relative;
-    }
-    .progress-bar div {
-        background: #3b82f6;
-        height: 100%;
-        position: absolute;
-        left: 0;
-        top: 0;
-    }
-
-    </style>
 </head>
-<body style="background-color: #f3f4f6; padding: 20px;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background: #2b6cb0; color: white; margin: 0 auto;">
-    <tr>
-        <td style="padding: 20px; font-size: 22px; font-weight: bold;">Management Performance Report</td>
-        <td align="right" style="padding: 20px;">
-            <img src="cid:company_logo" alt="Company Logo" width="100" height="100">
-        </td>
-    </tr>
-</table>
+<body style="background-color: #f3f4f6; padding: 20px; margin: 0; font-family: Arial, sans-serif;">
 
-
-  <!-- Main Content Table -->
-  <table class="container" cellpadding="0" cellspacing="0" border="0">
+    <!-- Header Table -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: #0792d0; color: white; margin: 0 auto; font-family: Arial, sans-serif;">
+        <tr>
+            <td style="padding: 20px; font-size: 22px; font-weight: bold; text-align: left;">
+                Management Performance Report
+            </td>
+            <td align="right" style="padding: 20px;">
+                <img src="cid:company_logo" alt="Company Logo" width="100" height="100" style="display: block;">
+            </td>
+        </tr>
+    </table>
+    <!-- Company Performance Section -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: white; margin: 0 auto; font-family: Arial, sans-serif;">
       <tr>
-          <td class="section">
-              <h2 style="font-size: 20px; color: #333;">Company Performance</h2>
+          <td style="padding: 20px;">
+              <h2 style="font-size: 20px; color: #333; margin: 0;">Company Performance</h2>
+          </td>
+      </tr>
 
-              <!-- Company Overview Stats -->
-              <table class="table-responsive" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <!-- Company Overview Stats -->
+      <tr>
+          <td style="padding: 0 20px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                      <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                      <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                           <div style="font-size: 14px; color: #4a5568;">Total Revenue</div>
                           <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ total_revenue }}</div>
                           {% if total_previous_year_revenue_raw > 0 %}
@@ -116,7 +40,7 @@
                           </div>
                           {% endif %}
                       </td>
-                      <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                      <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                           <div style="font-size: 14px; color: #4a5568;">Total Customers</div>
                           <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">{{ total_customers }}</div>
                           {% if previous_year_customers > 0 %}
@@ -126,7 +50,7 @@
                           </div>
                           {% endif %}
                       </td>
-                      <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                      <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                           <div style="font-size: 14px; color: #4a5568;">Total Budget</div>
                           <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ company_total_budget }}</div>
                       </td>
@@ -134,169 +58,158 @@
               </table>
           </td>
       </tr>
-        <!-- Company Quarterly Performance Table -->
-        <tr>
-          <td class="section">
-              <table class="table-responsive" cellpadding="0" cellspacing="0" border="0" width="100%">
+  </table>
+    <!-- Company Quarterly Performance Table -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: white; margin: 0 auto; font-family: Arial, sans-serif;">
+      <tr>
+          <td style="padding: 20px;">
+              <h2 style="font-size: 20px; color: #333; margin: 0;">Quarterly Performance</h2>
+          </td>
+      </tr>
+      <tr>
+          <td style="padding: 0 20px 20px;">
+              <table role="presentation" width="100%" cellpadding="5" cellspacing="0" border="0" style="border-collapse: collapse; border: 1px solid #e2e8f0;">
                   <thead>
-                      <tr>
-                          <th>Quarter</th>
-                          <th>Progress</th>
-                          <th align="right">Assigned</th>
-                          <th align="right">YoY Change</th>
-                          <th align="right">Unassigned</th>
-                          <th align="right">Budget</th>
+                      <tr style="background-color: #f8fafc;">
+                          <th align="left" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Quarter</th>
+                          <th align="center" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Progress</th>
+                          <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Assigned</th>
+                          <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">YoY Change</th>
+                          <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Unassigned</th>
+                          <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Budget</th>
                       </tr>
                   </thead>
                   <tbody>
                       {% for quarter in company_quarters %}
                       <tr>
-                          <td>{{ quarter.name }}</td>
-                          <td>
-                              <div class="progress-bar">
-                                  <div style="width: {{ quarter.completion_percentage }}%;">
-                                      <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 12px;">
+                          <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{{ quarter.name }}</td>
+                          <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                              <table role="presentation" width="100%" height="24" style="background-color: #e2e8f0; border-radius: 4px;">
+                                  <tr>
+                                      <td width="{{ quarter.completion_percentage }}%" style="background-color: #3b82f6; text-align: center; font-size: 12px; color: white; font-weight: bold;">
                                           {{ quarter.completion_percentage }}%
-                                      </span>
-                                  </div>
-                              </div>
+                                      </td>
+                                  </tr>
+                              </table>
                           </td>
-                          <td align="right">${{ quarter.assigned }}</td>
-                          <td align="right" style="color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
+                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.assigned }}</td>
+                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
                               {% if quarter.previous_year_assigned_raw > 0 %}
                                   {{ quarter.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change) }}%
                               {% else %}
                                   --
                               {% endif %}
                           </td>
-                          <td align="right">${{ quarter.unassigned }}</td>
-                          <td align="right">${{ quarter.budget }}</td>
+                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.unassigned }}</td>
+                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.budget }}</td>
                       </tr>
                       {% endfor %}
-                      <tr class="highlight">
-                          <td>Annual Total</td>
-                          <td>
-                              <div class="progress-bar">
-                                  <div style="width: {{ company_completion_percentage }}%;">
-                                      <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 12px;">
+                      <tr style="background-color: #f1f5f9; font-weight: bold;">
+                          <td style="padding: 10px;">Annual Total</td>
+                          <td style="padding: 10px;">
+                              <table role="presentation" width="100%" height="24" style="background-color: #e2e8f0; border-radius: 4px;">
+                                  <tr>
+                                      <td width="{{ company_completion_percentage }}%" style="background-color: #3b82f6; text-align: center; font-size: 12px; color: white; font-weight: bold;">
                                           {{ company_completion_percentage }}%
-                                      </span>
-                                  </div>
-                              </div>
+                                      </td>
+                                  </tr>
+                              </table>
                           </td>
-                          <td align="right">${{ total_revenue }}</td>
-                          <td align="right" style="color: {{ total_year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
+                          <td align="right" style="padding: 10px;">${{ total_revenue }}</td>
+                          <td align="right" style="padding: 10px; color: {{ total_year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
                               {{ total_year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(total_year_over_year_change) }}%
                           </td>
-                          <td align="right">${{ total_unassigned_revenue }}</td>
-                          <td align="right">${{ company_total_budget }}</td>
+                          <td align="right" style="padding: 10px;">${{ total_unassigned_revenue }}</td>
+                          <td align="right" style="padding: 10px;">${{ company_total_budget }}</td>
                       </tr>
                   </tbody>
               </table>
           </td>
       </tr>
-        <!-- Individual AE Performance Sections -->
-        {% for ae in ae_data %}
+  </table>
+    <!-- Individual AE Performance Sections -->
+    {% for ae in ae_data %}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: white; margin: 20px auto; font-family: Arial, sans-serif;">
         <tr>
-            <td class="section">
-                <h2 style="font-size: 20px; color: #333;">{{ ae.name }}'s Performance</h2>
+            <td style="padding: 20px;">
+                <h2 style="font-size: 20px; color: #333; margin: 0;">{{ ae.name }}'s Performance</h2>
+            </td>
+        </tr>
 
-                <!-- AE Overview Stats -->
-                <table class="table-responsive" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <!-- AE Overview Stats -->
+        <tr>
+            <td style="padding: 0 20px 20px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                        <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Revenue</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ ae.total_assigned_revenue }}</div>
-                            {% if ae.previous_year_revenue_raw > 0 %}
-                            <div style="font-size: 12px; margin-top: 4px; color: {{ ae.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
-                                vs ${{ ae.previous_year_revenue_display }} last year 
-                                ({{ ae.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(ae.year_over_year_change) }}%)
-                            </div>
-                            {% endif %}
                         </td>
-                        <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                        <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Customers</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">{{ ae.total_customers }}</div>
-                            {% if ae.previous_year_customers > 0 %}
-                            <div style="font-size: 12px; margin-top: 4px; color: {{ ae.total_customers > ae.previous_year_customers and '#059669' or '#dc2626' }};">
-                                vs {{ ae.previous_year_customers }} last year 
-                                ({{ ((ae.total_customers - ae.previous_year_customers) / ae.previous_year_customers * 100) | round(1) }}%)
-                            </div>
-                            {% endif %}
                         </td>
-                        <td width="33%" align="center" style="padding: 16px; background: #f8fafc;">
+                        <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Budget</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ ae.total_budget }}</div>
                         </td>
                     </tr>
                 </table>
+            </td>
+        </tr>
 
-                <!-- AE Quarterly Performance Table -->
-                <table class="table-responsive" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <!-- AE Quarterly Performance Table -->
+        <tr>
+            <td style="padding: 0 20px 20px;">
+                <table role="presentation" width="100%" cellpadding="5" cellspacing="0" border="0" style="border-collapse: collapse; border: 1px solid #e2e8f0;">
                     <thead>
-                        <tr>
-                            <th>Quarter</th>
-                            <th>Progress</th>
-                            <th align="right">Assigned</th>
-                            <th align="right">YoY Change</th>
-                            <th align="right">Unassigned</th>
-                            <th align="right">Budget</th>
+                        <tr style="background-color: #f8fafc;">
+                            <th align="left" style="padding: 10px;">Quarter</th>
+                            <th align="center" style="padding: 10px;">Progress</th>
+                            <th align="right" style="padding: 10px;">Assigned</th>
+                            <th align="right" style="padding: 10px;">YoY Change</th>
+                            <th align="right" style="padding: 10px;">Unassigned</th>
+                            <th align="right" style="padding: 10px;">Budget</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for quarter in ae.quarters %}
                         <tr>
-                            <td>{{ quarter.name }}</td>
-                            <td>
-                                <div class="progress-bar">
-                                    <div style="width: {{ quarter.completion_percentage }}%;">
-                                        <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 12px;">
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{{ quarter.name }}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                                <table role="presentation" width="100%" height="24" style="background-color: #e2e8f0; border-radius: 4px;">
+                                    <tr>
+                                        <td width="{{ quarter.completion_percentage }}%" style="background-color: #3b82f6; text-align: center; font-size: 12px; color: white; font-weight: bold;">
                                             {{ quarter.completion_percentage }}%
-                                        </span>
-                                    </div>
-                                </div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
-                            <td align="right">${{ quarter.assigned }}</td>
-                            <td align="right" style="color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
+                            <td align="right" style="padding: 10px;">${{ quarter.assigned }}</td>
+                            <td align="right" style="padding: 10px; color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
                                 {% if quarter.previous_year_assigned_raw > 0 %}
                                     {{ quarter.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change) }}%
                                 {% else %}
                                     --
                                 {% endif %}
                             </td>
-                            <td align="right">${{ quarter.unassigned }}</td>
-                            <td align="right">${{ quarter.budget }}</td>
+                            <td align="right" style="padding: 10px;">${{ quarter.unassigned }}</td>
+                            <td align="right" style="padding: 10px;">${{ quarter.budget }}</td>
                         </tr>
                         {% endfor %}
-                        <tr class="highlight">
-                            <td>Annual Total</td>
-                            <td>
-                                <div class="progress-bar">
-                                    <div style="width: {{ ae.annual_totals.completion_percentage }}%;">
-                                        <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #fff; font-weight: bold; font-size: 12px;">
-                                            {{ ae.annual_totals.completion_percentage }}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td align="right">${{ ae.annual_totals.assigned }}</td>
-                            <td align="right" style="color: {{ ae.annual_totals.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
-                                {{ ae.annual_totals.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(ae.annual_totals.year_over_year_change) }}%
-                            </td>
-                            <td align="right">${{ ae.annual_totals.unassigned }}</td>
-                            <td align="right">${{ ae.annual_totals.budget }}</td>
-                        </tr>
                     </tbody>
                 </table>
             </td>
         </tr>
-        {% endfor %}
-        <!-- Note Section -->
-        <tr>
-          <td class="section">
-              <table class="table-responsive" cellpadding="0" cellspacing="0" border="0" width="100%">
+    </table>
+    {% endfor %}
+    <!-- Final Note Section -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: white; margin: 20px auto; font-family: Arial, sans-serif;">
+      <tr>
+          <td style="padding: 20px;">
+              <table role="presentation" width="100%" cellpadding="10" cellspacing="0" border="0" style="border-collapse: collapse;">
                   <tr>
-                      <td style="background: #fff5f5; border-left: 4px solid #fc8181; padding: 16px;">
+                      <td style="background-color: #fff5f5; border-left: 4px solid #fc8181; padding: 16px; font-size: 14px; color: #333;">
                           <strong>Note:</strong> This report shows GROSS revenue figures.
                       </td>
                   </tr>
@@ -304,5 +217,6 @@
           </td>
       </tr>
   </table>
+
 </body>
 </html>
