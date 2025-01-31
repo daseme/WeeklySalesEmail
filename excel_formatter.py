@@ -103,7 +103,9 @@ class ExcelFormatter:
         finally:
             workbook.close()
 
-    def _format_sheet1(self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData):
+    def _format_sheet1(
+        self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData
+    ):
         """Format the main sales report sheet"""
         money_fmt = workbook.add_format({"num_format": 42, "align": "center"})
         text_fmt = workbook.add_format({"align": "left"})
@@ -113,8 +115,8 @@ class ExcelFormatter:
         worksheet.set_column("D:G", 10, money_fmt)
 
         # Filter data for current AE
-        ae_data = sales_data.report[sales_data.report['AE1'] == ae_name]
-        
+        ae_data = sales_data.report[sales_data.report["AE1"] == ae_name]
+
         # Calculate table range including all rows plus header and total row
         total_rows = len(ae_data)
         table_range = f"A1:G{total_rows + 1}"  # +1 for header, +1 for total row
@@ -130,7 +132,7 @@ class ExcelFormatter:
                 "autofilter": True,
                 "total_row": True,
                 "style": "Table Style Light 11",
-            }
+            },
         )
 
         worksheet.freeze_panes(1, 0)

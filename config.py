@@ -9,23 +9,29 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
 @dataclass
 class AEBudget:
     """Represents the quarterly budget for an Account Executive"""
+
     q1: float
     q2: float
     q3: float
     q4: float
 
+
 @dataclass
 class AccountExecutive:
     """Represents an Account Executive's configuration"""
+
     enabled: bool
     budgets: AEBudget
+
 
 @dataclass
 class Config:
     """Main configuration class for the sales report application"""
+
     root_path: str
     reports_folder: str
     vba_path: str
@@ -36,6 +42,8 @@ class Config:
     account_executives: Dict[str, AccountExecutive]
     test_mode: bool = False
     test_email: str = None
+    logo_path: str = os.path.join(os.path.dirname(__file__), "email_templates", "logo.png")
+
 
     @property
     def active_aes(self) -> List[str]:
@@ -70,11 +78,15 @@ class Config:
         # Validate test mode settings
         if self.test_mode:
             if self.management_recipients != [self.test_email]:
-                raise ValueError("Test mode management recipients contain non-test emails")
+                raise ValueError(
+                    "Test mode management recipients contain non-test emails"
+                )
             # Validate AE recipients in test mode
             for ae in self.active_aes:
                 if self.email_recipients.get(ae, []) != [self.test_email]:
-                    raise ValueError(f"Test mode recipients for {ae} contain non-test emails")
+                    raise ValueError(
+                        f"Test mode recipients for {ae} contain non-test emails"
+                    )
         else:
             # Validate management recipients in production mode
             if not self.management_recipients:
@@ -104,8 +116,7 @@ class Config:
         if "account_executives" in config_data:  # Add this check
             for name, ae_data in config_data["account_executives"].items():
                 account_executives[name] = AccountExecutive(
-                    enabled=ae_data["enabled"],
-                    budgets=AEBudget(**ae_data["budgets"])
+                    enabled=ae_data["enabled"], budgets=AEBudget(**ae_data["budgets"])
                 )
 
         # Create instance
@@ -119,15 +130,17 @@ class Config:
             management_recipients=config_data.get("management_recipients", []),
             account_executives=account_executives,
             test_mode=config_data.get("test_mode", False),
-            test_email=os.getenv("TEST_EMAIL", "test@example.com")
+            test_email=os.getenv("TEST_EMAIL", "test@example.com"),
         )
 
         # Load email recipients for enabled AEs
         enabled_aes = [name for name, ae in account_executives.items() if ae.enabled]
-        instance.email_recipients = instance._load_email_recipients(enabled_aes)  # This should work now
+        instance.email_recipients = instance._load_email_recipients(
+            enabled_aes
+        )  # This should work now
 
         return instance
-    
+
     def _load_email_recipients(self, ae_list: List[str]) -> Dict[str, List[str]]:
         """Load email recipients from environment variables"""
         email_recipients = {}
@@ -135,7 +148,9 @@ class Config:
             env_key = f"AE_EMAILS_{ae.upper().replace(' ', '_')}"
             emails_str = os.getenv(env_key, "")
             if emails_str:
-                email_recipients[ae] = [email.strip() for email in emails_str.split(",")]
+                email_recipients[ae] = [
+                    email.strip() for email in emails_str.split(",")
+                ]
             else:
                 email_recipients[ae] = []
         return email_recipients

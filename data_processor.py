@@ -11,6 +11,7 @@ from config import Config, AccountExecutive
 @dataclass
 class Budget:
     """Container for quarterly budget values"""
+
     q1: float
     q2: float
     q3: float
@@ -20,6 +21,7 @@ class Budget:
 @dataclass
 class Config:
     """Configuration container"""
+
     root_path: str
     reports_folder: str
     vba_path: str
@@ -33,6 +35,7 @@ class Config:
 @dataclass
 class SalesData:
     """Container for processed sales data"""
+
     report: pd.DataFrame
     budget_unassigned: pd.DataFrame
     quarter_columns: List[str]
@@ -157,24 +160,30 @@ class DataProcessor:
         """Create pivot table from cleaned data"""
         print("\n=== PIVOT DEBUG ===")
         print(f"1. Shape before pivot: {df.shape}")
-        
+
         # Define columns to keep as is
         id_vars = [
-            "Customer", "Market", "Revenue Class", "AE1", 
-            "BrokerName", "Agency", "AgencyPercent", "Sector"
+            "Customer",
+            "Market",
+            "Revenue Class",
+            "AE1",
+            "BrokerName",
+            "Agency",
+            "AgencyPercent",
+            "Sector",
         ]
 
         # Find date columns for both years
         current_year = datetime.now().year
         previous_year = current_year - 1
-        
+
         date_columns = []
         for year in [previous_year, current_year]:
             for month in range(1, 13):
                 col = f"{month}/1/{year}"
                 if col in df.columns:
                     date_columns.append(col)
-        
+
         print(f"2. Found {len(date_columns)} date columns")
         print(f"3. Sample date columns: {date_columns[:5]}")
 
@@ -183,28 +192,25 @@ class DataProcessor:
         print(f"4. Subset shape: {df_subset.shape}")
 
         df_pivot = pd.melt(
-            df_subset, 
-            id_vars=id_vars, 
-            var_name="Date", 
-            value_name="Amt"
+            df_subset, id_vars=id_vars, var_name="Date", value_name="Amt"
         )
 
         # Convert to datetime and add derived columns
         df_pivot["Date"] = pd.to_datetime(df_pivot["Date"])
         df_pivot["Quarter"] = df_pivot["Date"].dt.quarter
         df_pivot["Year"] = df_pivot["Date"].dt.year
-        
+
         # Create year-specific quarter names (e.g., "24Q1", "25Q1")
         df_pivot["Year_Quarter"] = (
-            df_pivot["Year"].astype(str).str[-2:] + 
-            "Q" + 
-            df_pivot["Quarter"].astype(str)
+            df_pivot["Year"].astype(str).str[-2:]
+            + "Q"
+            + df_pivot["Quarter"].astype(str)
         )
 
         print("\n5. Final pivot info:")
         print(f"Shape: {df_pivot.shape}")
         print("Year quarters present:", sorted(df_pivot["Year_Quarter"].unique()))
-        
+
         return df_pivot
 
     def _clean_currency(self, value) -> float:
@@ -221,58 +227,59 @@ class DataProcessor:
         """Filter data for current and previous year with positive amounts"""
         print("\n=== DETAILED TIMEFRAME DEBUG ===")
         print(f"1. Initial shape: {df.shape}")
-        
+
         # Show date range
         print(f"2. Date range: {df['Date'].min()} to {df['Date'].max()}")
         print(f"3. Years present: {sorted(df['Date'].dt.year.unique())}")
-        
+
         # Show data by year before filtering
         print("\n4. Rows per year before filtering:")
-        year_counts = df.groupby(df['Date'].dt.year).size()
+        year_counts = df.groupby(df["Date"].dt.year).size()
         print(year_counts)
-        
+
         # Show non-zero amounts by year
         print("\n5. Non-zero amounts by year:")
-        nonzero = df[df["Amt"] > 0].groupby(df['Date'].dt.year).size()
+        nonzero = df[df["Amt"] > 0].groupby(df["Date"].dt.year).size()
         print(nonzero)
-        
+
         current_year = datetime.now().year
         previous_year = current_year - 1
-        
+
         # After year filter but before amount filter
         year_filtered = df[df["Date"].dt.year.isin([current_year, previous_year])]
         print(f"\n6. After year filter (before amount filter): {year_filtered.shape}")
-        
+
         # After both filters
         filtered_df = year_filtered[year_filtered["Amt"] > 0]
         print(f"7. After amount filter: {filtered_df.shape}")
-        
+
         print("\n8. Sample of data:")
         print(filtered_df[["Date", "AE1", "Amt"]].head())
-        
+
         return filtered_df
 
     def _create_main_report(self, timeframe: pd.DataFrame) -> pd.DataFrame:
         """Create the main sales report with proper filtering of empty rows"""
         print("\n=== Main Report Creation Debug ===")
         print(f"1. Initial timeframe shape: {timeframe.shape}")
-        print(f"2. Year_Quarter values present: {sorted(timeframe['Year_Quarter'].unique())}")
-        
+        print(
+            f"2. Year_Quarter values present: {sorted(timeframe['Year_Quarter'].unique())}"
+        )
+
         # Create a copy to avoid SettingWithCopyWarning
         timeframe = timeframe.copy()
-        
+
         # Fill NaN values with appropriate defaults
         timeframe["Customer"] = timeframe["Customer"].fillna("Unspecified Customer")
         timeframe["Sector"] = timeframe["Sector"].fillna("Unspecified Sector")
         timeframe["AE1"] = timeframe["AE1"].fillna("")
-        
+
         # Clean the Amt column
         timeframe["Amt"] = pd.to_numeric(
-            timeframe["Amt"].replace("[\$,]", "", regex=True), 
-            errors="coerce"
+            timeframe["Amt"].replace("[\$,]", "", regex=True), errors="coerce"
         )
         timeframe = timeframe[timeframe["Amt"].notna() & (timeframe["Amt"] > 0)]
-        
+
         # Filter for active AEs
         active_aes = self.config.active_aes
         timeframe = timeframe[
@@ -281,18 +288,21 @@ class DataProcessor:
             .str.lower()
             .isin([ae.lower() for ae in active_aes])
         ]
-        
+
         print(f"3. After AE filtering: {timeframe.shape}")
-        
+
         # Create the summary DataFrame
         summary = (
             timeframe.groupby(["AE1", "Sector", "Customer", "Year_Quarter"])["Amt"]
             .sum()
             .reset_index()
         )
-        
-        print("4. Unique Year_Quarters in summary:", sorted(summary["Year_Quarter"].unique()))
-        
+
+        print(
+            "4. Unique Year_Quarters in summary:",
+            sorted(summary["Year_Quarter"].unique()),
+        )
+
         # Create the pivot table - MODIFIED to keep both years
         pivot_table = pd.pivot_table(
             summary,
@@ -302,27 +312,27 @@ class DataProcessor:
             fill_value=0,
             aggfunc="sum",
         ).reset_index()
-        
+
         print("5. Final columns:", pivot_table.columns.tolist())
-        
+
         # Ensure all required quarters exist
         all_quarters = []
         current_year = str(datetime.now().year)[2:]
         previous_year = str(int(current_year) - 1)
-        
+
         for year in [previous_year, current_year]:
             for q in range(1, 5):
                 quarter = f"{year}Q{q}"
                 all_quarters.append(quarter)
                 if quarter not in pivot_table.columns:
                     pivot_table[quarter] = 0
-        
+
         # Sort columns to ensure consistent order
         final_columns = ["AE1", "Sector", "Customer"] + sorted(all_quarters)
         report = pivot_table.reindex(columns=final_columns, fill_value=0)
-        
+
         print("6. Final report columns:", report.columns.tolist())
-        
+
         return report.sort_values(["AE1", "Sector", "Customer"])
 
     def _create_budget_report(self, main_report: pd.DataFrame) -> pd.DataFrame:
@@ -399,20 +409,26 @@ class DataProcessor:
             filename = f"{sales_person}-Sales Tool-{datetime.now().strftime('%y%m%d-%H%M%S')}.xlsx"
             full_path = os.path.join(report_folder, filename)
             sales_person_data = report[report.AE1 == sales_person].copy()
-            budget_data = budget_unassigned[budget_unassigned.AE1 == sales_person].copy()
+            budget_data = budget_unassigned[
+                budget_unassigned.AE1 == sales_person
+            ].copy()
 
             try:
                 with pd.ExcelWriter(full_path, engine="xlsxwriter") as writer:
                     # Write data first
                     sales_person_data.to_excel(writer, sheet_name="Sheet1", index=False)
-                    budget_data.to_excel(writer, sheet_name="Budget-Assigned-Unassigned", index=False)
-                    
+                    budget_data.to_excel(
+                        writer, sheet_name="Budget-Assigned-Unassigned", index=False
+                    )
+
                     workbook = writer.book
                     worksheet1 = writer.sheets["Sheet1"]
-                    
+
                     # Set formats
-                    money_fmt = workbook.add_format({"num_format": "$#,##0", "align": "right"})
-                    
+                    money_fmt = workbook.add_format(
+                        {"num_format": "$#,##0", "align": "right"}
+                    )
+
                     # Column formatting
                     worksheet1.set_column("A:B", 15)
                     worksheet1.set_column("C:C", 30)
@@ -421,22 +437,40 @@ class DataProcessor:
                     # Critical change: Calculate table range to include all data rows plus header and totals
                     num_rows = len(sales_person_data)
                     end_row = num_rows + 1  # Add 1 for header and 1 for totals
-                    
+
                     # Define the Excel table with proper range
-                    worksheet1.add_table(0, 0, end_row, 6, {
-                        "columns": [
-                            {"header": "AE1"},
-                            {"header": "Sector"},
-                            {"header": "Customer"},
-                            {"header": self.quarter_columns[0], "total_function": "sum"},
-                            {"header": self.quarter_columns[1], "total_function": "sum"},
-                            {"header": self.quarter_columns[2], "total_function": "sum"},
-                            {"header": self.quarter_columns[3], "total_function": "sum"}
-                        ],
-                        "style": "Table Style Light 11",
-                        "autofilter": True,
-                        "total_row": True
-                    })
+                    worksheet1.add_table(
+                        0,
+                        0,
+                        end_row,
+                        6,
+                        {
+                            "columns": [
+                                {"header": "AE1"},
+                                {"header": "Sector"},
+                                {"header": "Customer"},
+                                {
+                                    "header": self.quarter_columns[0],
+                                    "total_function": "sum",
+                                },
+                                {
+                                    "header": self.quarter_columns[1],
+                                    "total_function": "sum",
+                                },
+                                {
+                                    "header": self.quarter_columns[2],
+                                    "total_function": "sum",
+                                },
+                                {
+                                    "header": self.quarter_columns[3],
+                                    "total_function": "sum",
+                                },
+                            ],
+                            "style": "Table Style Light 11",
+                            "autofilter": True,
+                            "total_row": True,
+                        },
+                    )
 
                     # Format other sheet
                     worksheet2 = writer.sheets["Budget-Assigned-Unassigned"]

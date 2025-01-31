@@ -116,21 +116,22 @@ class EmailSender:
         return mail
 
     def _create_management_mail(self, stats: ManagementStats, recipients: List[str]) -> Mail:
-        """Create mail object for management report"""
+        """Create mail object for management report."""
         subject = f"Weekly Sales Management Report - {datetime.now().strftime('%Y-%m-%d')}"
-        html_content = Content(
-            "text/html",
-            self.template_renderer.render_management_report(stats)
-        )
+        html_content = self.template_renderer.render_management_report(stats)
 
         mail = Mail(
-            from_email=Email(self.config.sender_email),
+            from_email=self.config.sender_email,  # Keep this as it was originally
+            to_emails=recipients,  # Keep this as a list of strings
             subject=subject,
-            to_emails=[To(email) for email in recipients],
             html_content=html_content
         )
 
+        # Attach the logo
+        self._attach_logo(mail)
+
         return mail
+
 
     def _add_attachment(self, mail: Mail, file_path: str) -> None:
         """Add Excel file as attachment to email"""
@@ -152,3 +153,28 @@ class EmailSender:
 
         except Exception as e:
             raise RuntimeError(f"Error adding attachment: {str(e)}")
+        
+    def _attach_logo(self, mail: Mail) -> None:
+        """Attach company logo as an inline image."""
+        logo_path = self.config.logo_path
+
+        if not os.path.exists(logo_path):
+            print(f"Warning: Logo file not found at {logo_path}, skipping attachment.")
+            return
+
+        try:
+            with open(logo_path, "rb") as img:
+                encoded_logo = base64.b64encode(img.read()).decode()
+
+            attachment = Attachment(
+                file_content=FileContent(encoded_logo),
+                file_type=FileType("image/png"),
+                file_name=FileName("company_logo.png"),
+                disposition=Disposition("inline"),
+                content_id=ContentId("company_logo")
+            )
+
+            mail.add_attachment(attachment)
+
+        except Exception as e:
+            print(f"Error attaching logo: {str(e)}")
