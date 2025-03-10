@@ -336,7 +336,7 @@ class DataProcessor:
         return report.sort_values(["AE1", "Sector", "Customer"])
 
     def _create_budget_report(self, main_report: pd.DataFrame) -> pd.DataFrame:
-        """Create budget and unassigned report"""
+        """Create budget and unassigned report with correct assigned calculation"""
         # Create a copy of the report to avoid warnings
         main_report = main_report.copy()
 
@@ -347,60 +347,72 @@ class DataProcessor:
 
         # Ensure quarter columns are numeric
         for col in self.quarter_columns:
-            main_report[col] = pd.to_numeric(
-                main_report[col].replace("", "0"), errors="coerce"
-            )
+            main_report[col] = pd.to_numeric(main_report[col].replace("", "0"), errors="coerce")
 
-        # Get assigned totals for non-zero rows
-        assigned = main_report.groupby("AE1")[self.quarter_columns].sum().reset_index()
-
-        # Create budget rows using new config structure
+        # Calculate assigned totals correctly
+        assigned_rows = []
         budget_rows = []
+        unassigned_rows = []
+
+        # Process each AE
         for ae_name, ae_config in self.config.account_executives.items():
-            if ae_config.enabled:
-                budget_row = {
-                    "AE1": ae_name,
-                    "Sector": "Budget",
-                    "Customer": "Budget",
-                    self.quarter_columns[0]: float(ae_config.budgets.q1),
-                    self.quarter_columns[1]: float(ae_config.budgets.q2),
-                    self.quarter_columns[2]: float(ae_config.budgets.q3),
-                    self.quarter_columns[3]: float(ae_config.budgets.q4),
-                }
-                budget_rows.append(budget_row)
+            if not ae_config.enabled:
+                continue
 
-        # Create budget DataFrame
-        budget_df = pd.DataFrame(budget_rows)
+            ae_data = main_report[main_report['AE1'] == ae_name]
+            
+            # Create budget row
+            budget_row = {
+                'AE1': ae_name,
+                'Sector': 'Budget',
+                'Customer': 'Budget'
+            }
+            for i, qtr in enumerate(self.quarter_columns, 1):
+                budget_row[qtr] = float(getattr(ae_config.budgets, f'q{i}'))
+            budget_rows.append(budget_row)
 
-        # Get unassigned data
-        unassigned = main_report[main_report["Sector"] == "AAA - UNASSIGNED"].copy()
+            # Get unassigned data
+            unassigned_data = ae_data[ae_data['Sector'] == 'AAA - UNASSIGNED']
+            if not unassigned_data.empty:
+                unassigned_rows.append({
+                    'AE1': ae_name,
+                    'Sector': 'AAA - UNASSIGNED',
+                    'Customer': 'New Accounts',
+                    **{qtr: unassigned_data[qtr].sum() for qtr in self.quarter_columns}
+                })
 
-        # Ensure numeric columns in unassigned data
-        for col in self.quarter_columns:
-            unassigned[col] = pd.to_numeric(
-                unassigned[col].replace("", "0"), errors="coerce"
-            )
+            # Calculate assigned (total minus unassigned)
+            assigned_row = {
+                'AE1': ae_name,
+                'Sector': 'Assigned',
+                'Customer': ''
+            }
+            for qtr in self.quarter_columns:
+                total_revenue = ae_data[qtr].sum()
+                unassigned_revenue = unassigned_data[qtr].sum() if not unassigned_data.empty else 0
+                assigned_row[qtr] = total_revenue - unassigned_revenue
+            assigned_rows.append(assigned_row)
 
-        # Only keep unassigned rows with non-zero values
-        unassigned = unassigned[unassigned[self.quarter_columns].sum(axis=1) > 0]
+        # Combine all rows
+        report = pd.concat([
+            pd.DataFrame(budget_rows),
+            pd.DataFrame(assigned_rows),
+            pd.DataFrame(unassigned_rows)
+        ], ignore_index=True)
 
-        # Combine reports and calculate totals
-        report = pd.concat([budget_df, assigned, unassigned], ignore_index=True)
-        report["Total"] = report[self.quarter_columns].sum(axis=1)
+        # Calculate total column
+        report['Total'] = report[self.quarter_columns].sum(axis=1)
 
         # Arrange columns
-        cols = ["AE1", "Sector", "Customer"] + self.quarter_columns + ["Total"]
+        cols = ['AE1', 'Sector', 'Customer'] + self.quarter_columns + ['Total']
         report = report.reindex(columns=cols)
 
-        # Fill missing values and sort
-        report["Sector"] = report["Sector"].fillna("Assigned")
-        report = report.sort_values(["AE1", "Sector", "Customer"])
+        # Sort the report
+        report = report.sort_values(['AE1', 'Sector'])
 
         return report
 
-    def save_report(
-        self, report: pd.DataFrame, budget_unassigned: pd.DataFrame, report_folder: str
-    ) -> List[str]:
+    def save_report(self, report: pd.DataFrame, budget_unassigned: pd.DataFrame, report_folder: str) -> List[str]:
         """Save reports as regular Excel files with proper formatting"""
         files_created = []
         os.makedirs(report_folder, exist_ok=True)
@@ -409,63 +421,59 @@ class DataProcessor:
             filename = f"{sales_person}-Sales Tool-{datetime.now().strftime('%y%m%d-%H%M%S')}.xlsx"
             full_path = os.path.join(report_folder, filename)
             sales_person_data = report[report.AE1 == sales_person].copy()
-            budget_data = budget_unassigned[
-                budget_unassigned.AE1 == sales_person
-            ].copy()
+            budget_data = budget_unassigned[budget_unassigned.AE1 == sales_person].copy()
 
             try:
                 with pd.ExcelWriter(full_path, engine="xlsxwriter") as writer:
                     # Write data first
                     sales_person_data.to_excel(writer, sheet_name="Sheet1", index=False)
-                    budget_data.to_excel(
-                        writer, sheet_name="Budget-Assigned-Unassigned", index=False
-                    )
+                    budget_data.to_excel(writer, sheet_name="Budget-Assigned-Unassigned", index=False)
 
                     workbook = writer.book
                     worksheet1 = writer.sheets["Sheet1"]
 
                     # Set formats
-                    money_fmt = workbook.add_format(
-                        {"num_format": "$#,##0", "align": "right"}
-                    )
+                    money_fmt = workbook.add_format({"num_format": "$#,##0", "align": "right"})
 
                     # Column formatting
                     worksheet1.set_column("A:B", 15)
                     worksheet1.set_column("C:C", 30)
-                    worksheet1.set_column("D:G", 12, money_fmt)
+                    
+                    # Format all quarter columns with money format
+                    quarter_start_col = 3  # Column D
+                    for col_idx in range(quarter_start_col, len(sales_person_data.columns)):
+                        col_letter = chr(65 + col_idx)  # Convert number to letter (3 = D, 4 = E, etc.)
+                        worksheet1.set_column(f"{col_letter}:{col_letter}", 12, money_fmt)
 
-                    # Critical change: Calculate table range to include all data rows plus header and totals
+                    # Calculate table range to include all data rows plus header
                     num_rows = len(sales_person_data)
                     end_row = num_rows + 1  # Add 1 for header and 1 for totals
 
-                    # Define the Excel table with proper range
+                    # Get all quarter columns
+                    id_cols = ["AE1", "Sector", "Customer"]
+                    quarter_cols = [col for col in sales_person_data.columns if col not in id_cols]
+
+                    # Define the Excel table with proper range and all columns
+                    table_columns = [
+                        {"header": "AE1"},
+                        {"header": "Sector"},
+                        {"header": "Customer"}
+                    ]
+                    
+                    # Add quarter columns with sum totals
+                    for quarter in quarter_cols:
+                        table_columns.append({
+                            "header": quarter,
+                            "total_function": "sum"
+                        })
+
                     worksheet1.add_table(
                         0,
                         0,
                         end_row,
-                        6,
+                        len(sales_person_data.columns) - 1,
                         {
-                            "columns": [
-                                {"header": "AE1"},
-                                {"header": "Sector"},
-                                {"header": "Customer"},
-                                {
-                                    "header": self.quarter_columns[0],
-                                    "total_function": "sum",
-                                },
-                                {
-                                    "header": self.quarter_columns[1],
-                                    "total_function": "sum",
-                                },
-                                {
-                                    "header": self.quarter_columns[2],
-                                    "total_function": "sum",
-                                },
-                                {
-                                    "header": self.quarter_columns[3],
-                                    "total_function": "sum",
-                                },
-                            ],
+                            "columns": table_columns,
                             "style": "Table Style Light 11",
                             "autofilter": True,
                             "total_row": True,
@@ -476,7 +484,11 @@ class DataProcessor:
                     worksheet2 = writer.sheets["Budget-Assigned-Unassigned"]
                     worksheet2.set_column("A:B", 15)
                     worksheet2.set_column("C:C", 30)
-                    worksheet2.set_column("D:H", 12, money_fmt)
+                    
+                    # Format all money columns in second sheet
+                    for col_idx in range(3, len(budget_data.columns)):
+                        col_letter = chr(65 + col_idx)
+                        worksheet2.set_column(f"{col_letter}:{col_letter}", 12, money_fmt)
 
                     # Freeze panes and set zoom
                     worksheet1.freeze_panes(1, 0)
