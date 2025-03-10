@@ -93,7 +93,7 @@ class ExcelFormatter:
 
                 # Apply appropriate formatting
                 if sheet_name == "Sheet1":
-                    self._format_sheet1(workbook, worksheet, sales_data)
+                    self._format_sheet1(workbook, worksheet, sales_data, ae_name)
                 else:
                     self._format_sheet2(workbook, worksheet, sales_data)
 
