@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import logging
 from dataclasses import dataclass
 from typing import Tuple, List, Dict
 import glob
@@ -65,30 +66,31 @@ class DataProcessor:
 
     def process_data(self) -> Tuple[SalesData, List[str]]:
         """Main method to process all sales data"""
+        logger = logging.getLogger(__name__)
         try:
             infile = self.get_latest_forecast_file()
-            print(f"Processing file: {infile}")
+            logger.info(f"Processing file: {infile}")
 
             # Read and process the data
             df = pd.read_excel(infile, "RevenueDB")
-            print(f"Read {len(df)} rows from Excel")
+            logger.info(f"Read {len(df)} rows from Excel")
 
             df_cleaned = self._clean_dataframe(df)
-            print(f"After cleaning: {len(df_cleaned)} rows")
+            logger.info(f"After cleaning: {len(df_cleaned)} rows")
 
             df_pivot = self._create_pivot(df_cleaned)
-            print(f"After pivot: {len(df_pivot)} rows")
+            logger.info(f"After pivot: {len(df_pivot)} rows")
 
             timeframe = self._filter_timeframe(df_pivot)
-            print(f"After timeframe filter: {len(timeframe)} rows")
+            logger.info(f"After timeframe filter: {len(timeframe)} rows")
 
             # Create main report and budget report
             main_report = self._create_main_report(timeframe)
-            print(f"Main report rows: {len(main_report)}")
-            print(f"AEs in main report: {main_report['AE1'].unique()}")
+            logger.info(f"Main report rows: {len(main_report)}")
+            logger.debug(f"AEs in main report: {main_report['AE1'].unique()}")
 
             budget_report = self._create_budget_report(main_report)
-            print(f"Budget report rows: {len(budget_report)}")
+            logger.info(f"Budget report rows: {len(budget_report)}")
 
             # Save the reports and get list of files created
             created_files = self.save_report(
@@ -96,7 +98,7 @@ class DataProcessor:
                 budget_report,
                 self.config.reports_folder,  # Use correct path from config
             )
-            print(f"Created files: {created_files}")
+            logger.info(f"Created files: {created_files}")
 
             # Return both the data and files list
             return (
@@ -105,8 +107,9 @@ class DataProcessor:
             )
 
         except Exception as e:
-            print(f"Error in process_data: {str(e)}")  # Debug print
+            logger.error(f"Error in process_data: {str(e)}")
             raise RuntimeError(f"Error processing data: {str(e)}") from e
+
 
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove unnecessary columns and rows"""
@@ -158,8 +161,9 @@ class DataProcessor:
 
     def _create_pivot(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create pivot table from cleaned data"""
-        print("\n=== PIVOT DEBUG ===")
-        print(f"1. Shape before pivot: {df.shape}")
+        logger = logging.getLogger(__name__)
+        logger.debug("=== PIVOT DEBUG ===")
+        logger.debug(f"1. Shape before pivot: {df.shape}")
 
         # Define columns to keep as is
         id_vars = [
@@ -184,12 +188,12 @@ class DataProcessor:
                 if col in df.columns:
                     date_columns.append(col)
 
-        print(f"2. Found {len(date_columns)} date columns")
-        print(f"3. Sample date columns: {date_columns[:5]}")
+        logger.debug(f"2. Found {len(date_columns)} date columns")
+        logger.debug(f"3. Sample date columns: {date_columns[:5]}")
 
         # Create pivot
         df_subset = df[id_vars + date_columns].copy()
-        print(f"4. Subset shape: {df_subset.shape}")
+        logger.debug(f"4. Subset shape: {df_subset.shape}")
 
         df_pivot = pd.melt(
             df_subset, id_vars=id_vars, var_name="Date", value_name="Amt"
@@ -207,11 +211,12 @@ class DataProcessor:
             + df_pivot["Quarter"].astype(str)
         )
 
-        print("\n5. Final pivot info:")
-        print(f"Shape: {df_pivot.shape}")
-        print("Year quarters present:", sorted(df_pivot["Year_Quarter"].unique()))
+        logger.debug("5. Final pivot info:")
+        logger.debug(f"Shape: {df_pivot.shape}")
+        logger.debug(f"Year quarters present: {sorted(df_pivot['Year_Quarter'].unique())}")
 
         return df_pivot
+
 
     def _clean_currency(self, value) -> float:
         """Clean currency strings to floats"""
@@ -225,46 +230,47 @@ class DataProcessor:
 
     def _filter_timeframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Filter data for current and previous year with positive amounts"""
-        print("\n=== DETAILED TIMEFRAME DEBUG ===")
-        print(f"1. Initial shape: {df.shape}")
+        logger = logging.getLogger(__name__)
+        logger.debug("=== DETAILED TIMEFRAME DEBUG ===")
+        logger.debug(f"1. Initial shape: {df.shape}")
 
         # Show date range
-        print(f"2. Date range: {df['Date'].min()} to {df['Date'].max()}")
-        print(f"3. Years present: {sorted(df['Date'].dt.year.unique())}")
+        logger.debug(f"2. Date range: {df['Date'].min()} to {df['Date'].max()}")
+        logger.debug(f"3. Years present: {sorted(df['Date'].dt.year.unique())}")
 
         # Show data by year before filtering
-        print("\n4. Rows per year before filtering:")
+        logger.debug("4. Rows per year before filtering:")
         year_counts = df.groupby(df["Date"].dt.year).size()
-        print(year_counts)
+        logger.debug(f"\n{year_counts}")
 
         # Show non-zero amounts by year
-        print("\n5. Non-zero amounts by year:")
+        logger.debug("5. Non-zero amounts by year:")
         nonzero = df[df["Amt"] > 0].groupby(df["Date"].dt.year).size()
-        print(nonzero)
+        logger.debug(f"\n{nonzero}")
 
         current_year = datetime.now().year
         previous_year = current_year - 1
 
         # After year filter but before amount filter
         year_filtered = df[df["Date"].dt.year.isin([current_year, previous_year])]
-        print(f"\n6. After year filter (before amount filter): {year_filtered.shape}")
+        logger.debug(f"6. After year filter (before amount filter): {year_filtered.shape}")
 
         # After both filters
         filtered_df = year_filtered[year_filtered["Amt"] > 0]
-        print(f"7. After amount filter: {filtered_df.shape}")
+        logger.debug(f"7. After amount filter: {filtered_df.shape}")
 
-        print("\n8. Sample of data:")
-        print(filtered_df[["Date", "AE1", "Amt"]].head())
+        logger.debug("8. Sample of data:")
+        logger.debug(filtered_df[["Date", "AE1", "Amt"]].head().to_string())
 
         return filtered_df
 
+
     def _create_main_report(self, timeframe: pd.DataFrame) -> pd.DataFrame:
         """Create the main sales report with proper filtering of empty rows"""
-        print("\n=== Main Report Creation Debug ===")
-        print(f"1. Initial timeframe shape: {timeframe.shape}")
-        print(
-            f"2. Year_Quarter values present: {sorted(timeframe['Year_Quarter'].unique())}"
-        )
+        logger = logging.getLogger(__name__)
+        logger.debug("=== Main Report Creation Debug ===")
+        logger.debug(f"1. Initial timeframe shape: {timeframe.shape}")
+        logger.debug(f"2. Year_Quarter values present: {sorted(timeframe['Year_Quarter'].unique())}")
 
         # Create a copy to avoid SettingWithCopyWarning
         timeframe = timeframe.copy()
@@ -283,13 +289,10 @@ class DataProcessor:
         # Filter for active AEs
         active_aes = self.config.active_aes
         timeframe = timeframe[
-            timeframe["AE1"]
-            .str.strip()
-            .str.lower()
-            .isin([ae.lower() for ae in active_aes])
+            timeframe["AE1"].str.strip().str.lower().isin([ae.lower() for ae in active_aes])
         ]
 
-        print(f"3. After AE filtering: {timeframe.shape}")
+        logger.debug(f"3. After AE filtering: {timeframe.shape}")
 
         # Create the summary DataFrame
         summary = (
@@ -298,10 +301,7 @@ class DataProcessor:
             .reset_index()
         )
 
-        print(
-            "4. Unique Year_Quarters in summary:",
-            sorted(summary["Year_Quarter"].unique()),
-        )
+        logger.debug(f"4. Unique Year_Quarters in summary: {sorted(summary['Year_Quarter'].unique())}")
 
         # Create the pivot table - MODIFIED to keep both years
         pivot_table = pd.pivot_table(
@@ -313,7 +313,7 @@ class DataProcessor:
             aggfunc="sum",
         ).reset_index()
 
-        print("5. Final columns:", pivot_table.columns.tolist())
+        logger.debug(f"5. Final columns: {pivot_table.columns.tolist()}")
 
         # Ensure all required quarters exist
         all_quarters = []
@@ -331,9 +331,10 @@ class DataProcessor:
         final_columns = ["AE1", "Sector", "Customer"] + sorted(all_quarters)
         report = pivot_table.reindex(columns=final_columns, fill_value=0)
 
-        print("6. Final report columns:", report.columns.tolist())
+        logger.debug(f"6. Final report columns: {report.columns.tolist()}")
 
         return report.sort_values(["AE1", "Sector", "Customer"])
+
 
     def _create_budget_report(self, main_report: pd.DataFrame) -> pd.DataFrame:
         """Create budget and unassigned report with correct assigned calculation"""

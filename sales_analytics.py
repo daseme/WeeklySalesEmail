@@ -2,6 +2,7 @@ from typing import Dict, List
 import pandas as pd
 from datetime import datetime
 from config import Config
+import logging
 # Import the data structures directly from email_template_renderer
 from email_template_renderer import QuarterData, SalesStats, ManagementStats
 
@@ -64,136 +65,132 @@ class SalesAnalytics:
         print(f"After preprocessing: {stats.__dict__}")  # Debugging
 
     def calculate_sales_stats(self, sales_data_df: pd.DataFrame, ae_name: str) -> SalesStats:
-            """Calculate sales statistics for a specific account executive."""
-            print(f"\n=== Processing Stats for {ae_name} ===")
+        """Calculate sales statistics for a specific account executive."""
+        logger = logging.getLogger(__name__)
+        logger.debug(f"=== Processing Stats for {ae_name} ===")
+        
+        # Verify AE is enabled and get config
+        ae_config = self.config.account_executives.get(ae_name)
+        if not ae_config or not ae_config.enabled:
+            raise ValueError(f"AE {ae_name} is not enabled or doesn't exist")
+        
+        # Get AE's data and ensure numeric values
+        ae_data = sales_data_df[sales_data_df.AE1 == ae_name].copy()
+        
+        # Calculate current and previous year column names
+        current_year = str(datetime.now().year)[2:]  # e.g., "25"
+        previous_year = str(int(current_year) - 1)   # e.g., "24"
+        current_quarters = [f"{current_year}Q{q}" for q in range(1, 5)]
+        previous_quarters = [f"{previous_year}Q{q}" for q in range(1, 5)]
+        
+        logger.debug("Looking for quarters:")
+        logger.debug(f"Current quarters: {current_quarters}")
+        logger.debug(f"Previous quarters: {previous_quarters}")
+        logger.debug(f"Available columns: {ae_data.columns.tolist()}")
+        
+        # Process quarterly data
+        quarterly_data = []
+        total_assigned = 0
+        total_unassigned = 0
+        total_previous_year = 0
+        
+        for q in range(1, 5):
+            current_quarter = f"{current_year}Q{q}"
+            previous_quarter = f"{previous_year}Q{q}"
+            budget_value = float(getattr(ae_config.budgets, f'q{q}'))
             
-            # Verify AE is enabled and get config
-            ae_config = self.config.account_executives.get(ae_name)
-            if not ae_config or not ae_config.enabled:
-                raise ValueError(f"AE {ae_name} is not enabled or doesn't exist")
+            logger.debug(f"Processing Q{q}:")
+            logger.debug(f"- Looking for current: {current_quarter}")
+            logger.debug(f"- Looking for previous: {previous_quarter}")
             
-            # Get AE's data and ensure numeric values
-            ae_data = sales_data_df[sales_data_df.AE1 == ae_name].copy()
-            
-            # Calculate current and previous year column names
-            current_year = str(datetime.now().year)[2:]  # "25"
-            previous_year = str(int(current_year) - 1)   # "24"
-            current_quarters = [f"{current_year}Q{q}" for q in range(1, 5)]
-            previous_quarters = [f"{previous_year}Q{q}" for q in range(1, 5)]
-            
-            print("\nLooking for quarters:")
-            print(f"Current quarters: {current_quarters}")
-            print(f"Previous quarters: {previous_quarters}")
-            print(f"Available columns: {ae_data.columns.tolist()}")
-            
-            # Process quarterly data
-            quarterly_data = []
-            total_assigned = 0
-            total_unassigned = 0
-            total_previous_year = 0
-            
-            for q in range(1, 5):
-                current_quarter = f"{current_year}Q{q}"
-                previous_quarter = f"{previous_year}Q{q}"
-                budget_value = float(getattr(ae_config.budgets, f'q{q}'))
-                
-                print(f"\nProcessing Q{q}:")
-                print(f"- Looking for current: {current_quarter}")
-                print(f"- Looking for previous: {previous_quarter}")
-                
-                # Current year calculations
-                assigned_revenue = ae_data[
-                    (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
-                    (ae_data[current_quarter] > 0)
-                ][current_quarter].sum()
-                
-                unassigned_revenue = ae_data[
-                    (ae_data['Sector'] == 'AAA - UNASSIGNED') & 
-                    (ae_data[current_quarter] > 0)
-                ][current_quarter].sum()
-                
-                # Previous year calculations
-                previous_assigned_revenue = ae_data[
-                    (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
-                    (ae_data[previous_quarter] > 0)
-                ][previous_quarter].sum()
-                
-                previous_unassigned_revenue = ae_data[
-                    (ae_data['Sector'] == 'AAA - UNASSIGNED') & 
-                    (ae_data[previous_quarter] > 0)
-                ][previous_quarter].sum()
-                
-                print(f"- Current quarter revenue: {assigned_revenue}")
-                print(f"- Current quarter unassigned: {unassigned_revenue}")
-                print(f"- Previous quarter revenue: {previous_assigned_revenue}")
-                print(f"- Previous quarter unassigned: {previous_unassigned_revenue}")
-                
-                # Update totals
-                total_assigned += assigned_revenue
-                total_unassigned += unassigned_revenue
-                total_previous_year += previous_assigned_revenue
-                
-                # Calculate completion percentage
-                completion_percentage = (assigned_revenue / budget_value * 100) if budget_value > 0 else 0
-                
-                # Year over year calculations
-                yoy_change = (
-                    ((assigned_revenue - previous_assigned_revenue) / previous_assigned_revenue * 100)
-                    if previous_assigned_revenue > 0
-                    else 0
-                )
-                print(f"- Year over year change: {yoy_change}%")
-                
-                # Create QuarterData object
-                quarterly_data.append(QuarterData(
-                    name=f"Q{q} {current_year}",
-                    assigned=assigned_revenue,
-                    unassigned=unassigned_revenue,
-                    budget=budget_value,
-                    completion_percentage=completion_percentage,
-                    previous_year_assigned=previous_assigned_revenue,
-                    previous_year_unassigned=previous_unassigned_revenue,
-                    year_over_year_change=yoy_change
-                ))
-            
-            # Calculate customer counts
-            current_customers = len(ae_data[
+            # Current year calculations
+            assigned_revenue = ae_data[
                 (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
-                (ae_data[current_quarters].sum(axis=1) > 0)
-            ]['Customer'].unique())
-
-            previous_customers = len(ae_data[
+                (ae_data[current_quarter] > 0)
+            ][current_quarter].sum()
+            
+            unassigned_revenue = ae_data[
+                (ae_data['Sector'] == 'AAA - UNASSIGNED') & 
+                (ae_data[current_quarter] > 0)
+            ][current_quarter].sum()
+            
+            # Previous year calculations
+            previous_assigned_revenue = ae_data[
                 (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
-                (ae_data[previous_quarters].sum(axis=1) > 0)
-            ]['Customer'].unique())
-
-            # Create quarterly and unassigned totals dictionaries
-            quarterly_totals = {q: d.assigned for q, d in zip(current_quarters, quarterly_data)}
-            unassigned_totals = {q: d.unassigned for q, d in zip(current_quarters, quarterly_data)}
-
-            # Calculate per customer metrics
-            avg_per_customer = total_assigned / current_customers if current_customers > 0 else 0
-
-            # Calculate total year-over-year change
-            total_yoy_change = (
-                ((total_assigned - total_previous_year) / total_previous_year * 100)
-                if total_previous_year > 0
+                (ae_data[previous_quarter] > 0)
+            ][previous_quarter].sum()
+            
+            previous_unassigned_revenue = ae_data[
+                (ae_data['Sector'] == 'AAA - UNASSIGNED') & 
+                (ae_data[previous_quarter] > 0)
+            ][previous_quarter].sum()
+            
+            logger.debug(f"- Current quarter revenue: {assigned_revenue}")
+            logger.debug(f"- Current quarter unassigned: {unassigned_revenue}")
+            logger.debug(f"- Previous quarter revenue: {previous_assigned_revenue}")
+            logger.debug(f"- Previous quarter unassigned: {previous_unassigned_revenue}")
+            
+            total_assigned += assigned_revenue
+            total_unassigned += unassigned_revenue
+            total_previous_year += previous_assigned_revenue
+            
+            # Calculate completion percentage
+            completion_percentage = (assigned_revenue / budget_value * 100) if budget_value > 0 else 0
+            
+            # Year over year calculations
+            yoy_change = (
+                ((assigned_revenue - previous_assigned_revenue) / previous_assigned_revenue * 100)
+                if previous_assigned_revenue > 0
                 else 0
             )
+            logger.debug(f"- Year over year change: {yoy_change}%")
+            
+            quarterly_data.append(QuarterData(
+                name=f"Q{q} {current_year}",
+                assigned=assigned_revenue,
+                unassigned=unassigned_revenue,
+                budget=budget_value,
+                completion_percentage=completion_percentage,
+                previous_year_assigned=previous_assigned_revenue,
+                previous_year_unassigned=previous_unassigned_revenue,
+                year_over_year_change=yoy_change
+            ))
+        
+        # Calculate customer counts
+        current_customers = len(ae_data[
+            (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
+            (ae_data[current_quarters].sum(axis=1) > 0)
+        ]['Customer'].unique())
 
-            # Create and return SalesStats
-            return SalesStats(
-                total_customers=current_customers,
-                total_assigned_revenue=total_assigned,
-                total_unassigned_revenue=total_unassigned,
-                quarterly_totals=quarterly_totals,
-                avg_per_customer=avg_per_customer,
-                unassigned_totals=unassigned_totals,
-                quarterly_data=quarterly_data,
-                previous_year_customers=previous_customers,
-                total_previous_year_revenue=total_previous_year,
-                total_year_over_year_change=total_yoy_change
-            )
+        previous_customers = len(ae_data[
+            (ae_data['Sector'] != 'AAA - UNASSIGNED') & 
+            (ae_data[previous_quarters].sum(axis=1) > 0)
+        ]['Customer'].unique())
+
+        quarterly_totals = {q: d.assigned for q, d in zip(current_quarters, quarterly_data)}
+        unassigned_totals = {q: d.unassigned for q, d in zip(current_quarters, quarterly_data)}
+
+        avg_per_customer = total_assigned / current_customers if current_customers > 0 else 0
+
+        total_yoy_change = (
+            ((total_assigned - total_previous_year) / total_previous_year * 100)
+            if total_previous_year > 0
+            else 0
+        )
+
+        return SalesStats(
+            total_customers=current_customers,
+            total_assigned_revenue=total_assigned,
+            total_unassigned_revenue=total_unassigned,
+            quarterly_totals=quarterly_totals,
+            avg_per_customer=avg_per_customer,
+            unassigned_totals=unassigned_totals,
+            quarterly_data=quarterly_data,
+            previous_year_customers=previous_customers,
+            total_previous_year_revenue=total_previous_year,
+            total_year_over_year_change=total_yoy_change
+        )
+
 
     def calculate_company_quarterly_data(self, df: pd.DataFrame) -> List[dict]:
         """Calculate quarterly data for the entire company."""

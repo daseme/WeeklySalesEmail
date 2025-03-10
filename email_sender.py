@@ -3,6 +3,7 @@ import base64
 from typing import List, Dict
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 import sendgrid
 from sendgrid.helpers.mail import (
     Mail, Email, To, Content, Attachment,
@@ -37,12 +38,15 @@ class EmailSender:
         """Initialize with configuration and template renderer"""
         self.config = config
         self.template_renderer = template_renderer
+        logger = logging.getLogger(__name__)
         api_key = config.sendgrid_api_key
-        print(f"API Key starts with: {api_key[:5]}... and is {len(api_key)} characters long")  # Safe way to debug
+        logger.debug(f"API Key starts with: {api_key[:5]}... and is {len(api_key)} characters long")
         self.sg = sendgrid.SendGridAPIClient(api_key=api_key)
+
 
     def send_report(self, ae_name: str, stats: SalesStats, report_path: str) -> bool:
         """Send email with report attachment to specified recipients"""
+        logger = logging.getLogger(__name__)
         try:
             # Verify AE is enabled before sending
             ae_config = self.config.account_executives.get(ae_name)
@@ -57,15 +61,17 @@ class EmailSender:
             if response.status_code not in [200, 201, 202]:
                 raise Exception(f"Error sending email. Status code: {response.status_code}")
 
-            print(f"Email sent successfully to {ae_name}'s team!")
+            logger.info(f"Email sent successfully to {ae_name}'s team!")
             return True
 
         except Exception as e:
-            print(f"Error sending email to {ae_name}: {str(e)}")
+            logger.error(f"Error sending email to {ae_name}: {str(e)}")
             return False
+
 
     def send_management_report(self, stats: ManagementStats) -> bool:
         """Send management rollup report"""
+        logger = logging.getLogger(__name__)
         try:
             recipients = self.config.management_recipients
             if isinstance(recipients, list) and len(recipients) == 1:
@@ -75,20 +81,21 @@ class EmailSender:
             if not recipients:
                 raise ValueError("No management recipients configured")
 
-            print(f"Preparing management report for recipients: {recipients}")
+            logger.info(f"Preparing management report for recipients: {recipients}")
             mail = self._create_management_mail(stats, recipients)
-            print(f"Sending management report with subject: {mail.subject}")
+            logger.info(f"Sending management report with subject: {mail.subject}")
             response = self.sg.send(mail)
 
             if response.status_code not in [200, 201, 202]:
                 raise Exception(f"Error sending management email. Status code: {response.status_code}")
 
-            print(f"Management rollup email sent successfully to {recipients}!")
+            logger.info(f"Management rollup email sent successfully to {recipients}!")
             return True
 
         except Exception as e:
-            print(f"Error sending management email: {str(e)}")
+            logger.error(f"Error sending management email: {str(e)}")
             return False
+
 
     def _get_recipients(self, ae_name: str) -> List[str]:
         """Get recipient list for the AE"""
@@ -156,10 +163,11 @@ class EmailSender:
         
     def _attach_logo(self, mail: Mail) -> None:
         """Attach company logo as an inline image."""
+        logger = logging.getLogger(__name__)
         logo_path = self.config.logo_path
 
         if not os.path.exists(logo_path):
-            print(f"Warning: Logo file not found at {logo_path}, skipping attachment.")
+            logger.warning(f"Logo file not found at {logo_path}, skipping attachment.")
             return
 
         try:
@@ -177,4 +185,4 @@ class EmailSender:
             mail.add_attachment(attachment)
 
         except Exception as e:
-            print(f"Error attaching logo: {str(e)}")
+            logger.error(f"Error attaching logo: {str(e)}")
