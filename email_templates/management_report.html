@@ -33,20 +33,20 @@
                       <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                           <div style="font-size: 14px; color: #4a5568;">Total Revenue</div>
                           <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ total_revenue }}</div>
-                          {% if total_previous_year_revenue_raw > 0 %}
-                          <div style="font-size: 12px; margin-top: 4px; color: {{ total_year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
+                          {% if total_previous_year_revenue_raw|float > 0 %}
+                          <div style="font-size: 12px; margin-top: 4px; color: {{ total_year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
                               vs ${{ total_previous_year_revenue }} last year 
-                              ({{ total_year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(total_year_over_year_change) }}%)
+                              ({{ total_year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(total_year_over_year_change|float) }}%)
                           </div>
                           {% endif %}
                       </td>
                       <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                           <div style="font-size: 14px; color: #4a5568;">Total Customers</div>
                           <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">{{ total_customers }}</div>
-                          {% if previous_year_customers > 0 %}
-                          <div style="font-size: 12px; margin-top: 4px; color: {{ total_customers > previous_year_customers and '#059669' or '#dc2626' }};">
+                          {% if previous_year_customers|int > 0 %}
+                          <div style="font-size: 12px; margin-top: 4px; color: {{ total_customers|int > previous_year_customers|int and '#059669' or '#dc2626' }};">
                               vs {{ previous_year_customers }} last year 
-                              ({{ ((total_customers - previous_year_customers) / previous_year_customers * 100) | round(1) }}%)
+                              ({{ ((total_customers|int - previous_year_customers|int) / previous_year_customers|int * 100) | round(1) }}%)
                           </div>
                           {% endif %}
                       </td>
@@ -72,7 +72,7 @@
                   <thead>
                       <tr style="background-color: #f8fafc;">
                           <th align="left" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Quarter</th>
-                          <th align="center" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Progress</th>
+                          <th align="center" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Budget Pacing</th>
                           <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Assigned</th>
                           <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">YoY Change</th>
                           <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Unassigned</th>
@@ -97,9 +97,9 @@
                         </td>
                         
                           <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.assigned }}</td>
-                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
-                              {% if quarter.previous_year_assigned_raw > 0 %}
-                                  {{ quarter.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change) }}%
+                          <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: {{ quarter.year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
+                              {% if quarter.previous_year_assigned_raw|float > 0 %}
+                                  {{ quarter.year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change|float) }}%
                               {% else %}
                                   --
                               {% endif %}
@@ -124,8 +124,12 @@
                         </td>
                         
                           <td align="right" style="padding: 10px;">${{ total_revenue }}</td>
-                          <td align="right" style="padding: 10px; color: {{ total_year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
-                              {{ total_year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(total_year_over_year_change) }}%
+                          <td align="right" style="padding: 10px; color: {{ total_year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
+                              {% if total_previous_year_revenue|float > 0 %}
+                                {{ total_year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(total_year_over_year_change|float) }}%
+                              {% else %}
+                                New
+                              {% endif %}
                           </td>
                           <td align="right" style="padding: 10px;">${{ total_unassigned_revenue }}</td>
                           <td align="right" style="padding: 10px;">${{ company_total_budget }}</td>
@@ -152,14 +156,31 @@
                         <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Revenue</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ ae.total_assigned_revenue }}</div>
+                            {% if ae.previous_year_revenue_raw|float > 0 %}
+                            <div style="font-size: 12px; margin-top: 4px; color: {{ ae.year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
+                                vs ${{ ae.previous_year_revenue_display }} last year 
+                                ({{ ae.year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(ae.year_over_year_change|float) }}%)
+                            </div>
+                            {% endif %}
                         </td>
                         <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Customers</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">{{ ae.total_customers }}</div>
+                            {% if ae.previous_year_customers|int > 0 %}
+                            <div style="font-size: 12px; margin-top: 4px; color: {{ ae.total_customers|int > ae.previous_year_customers|int and '#059669' or '#dc2626' }};">
+                                vs {{ ae.previous_year_customers }} last year
+                                {% if ae.previous_year_customers|int > 0 %}
+                                    ({{ ((ae.total_customers|int - ae.previous_year_customers|int) / ae.previous_year_customers|int * 100) | round(1) }}%)
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </td>
                         <td width="33%" align="center" style="padding: 16px; background-color: #f8fafc;">
                             <div style="font-size: 14px; color: #4a5568;">Total Budget</div>
                             <div style="font-size: 24px; font-weight: bold; color: #2b6cb0;">${{ ae.total_budget }}</div>
+                            <div style="font-size: 12px; margin-top: 4px; color: {{ ae.total_completion_percentage|int >= 75 and '#059669' or (ae.total_completion_percentage|int >= 50 and '#eab308' or '#dc2626') }};">
+                                {{ ae.total_completion_percentage }}% Complete
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -172,12 +193,12 @@
                 <table role="presentation" width="100%" cellpadding="5" cellspacing="0" border="0" style="border-collapse: collapse; border: 1px solid #e2e8f0;">
                     <thead>
                         <tr style="background-color: #f8fafc;">
-                            <th align="left" style="padding: 10px;">Quarter</th>
-                            <th align="center" style="padding: 10px;">Progress</th>
-                            <th align="right" style="padding: 10px;">Assigned</th>
-                            <th align="right" style="padding: 10px;">YoY Change</th>
-                            <th align="right" style="padding: 10px;">Unassigned</th>
-                            <th align="right" style="padding: 10px;">Budget</th>
+                            <th align="left" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Quarter</th>
+                            <th align="center" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Progress</th>
+                            <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Assigned</th>
+                            <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">YoY Change</th>
+                            <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Unassigned</th>
+                            <th align="right" style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Budget</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -185,32 +206,61 @@
                         <tr>
                             <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{{ quarter.name }}</td>
                             <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
-                                <table role="presentation" width="100%" height="24" style="background-color: #e2e8f0; border-radius: 4px;">
+                                <table role="presentation" width="100%" height="24" cellspacing="0" cellpadding="0" border="0" style="border-radius: 4px; border: 1px solid #ccc;">
                                     <tr>
+                                        <!-- Filled Portion -->
                                         <td width="{{ quarter.completion_percentage }}%" style="background-color: #3b82f6; text-align: center; font-size: 12px; color: white; font-weight: bold;">
                                             {{ quarter.completion_percentage }}%
                                         </td>
+                                        <!-- Empty Portion -->
+                                        <td width="{{ 100 - quarter.completion_percentage }}%" style="background-color: #e2e8f0;"></td>
                                     </tr>
                                 </table>
                             </td>
-                            <td align="right" style="padding: 10px;">${{ quarter.assigned }}</td>
-                            <td align="right" style="padding: 10px; color: {{ quarter.year_over_year_change >= 0 and '#059669' or '#dc2626' }};">
-                                {% if quarter.previous_year_assigned_raw > 0 %}
-                                    {{ quarter.year_over_year_change >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change) }}%
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.assigned }}</td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: {{ quarter.year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
+                                {% if quarter.previous_year_assigned_raw|float > 0 %}
+                                    {{ quarter.year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(quarter.year_over_year_change|float) }}%
                                 {% else %}
-                                    --
+                                    New
                                 {% endif %}
                             </td>
-                            <td align="right" style="padding: 10px;">${{ quarter.unassigned }}</td>
-                            <td align="right" style="padding: 10px;">${{ quarter.budget }}</td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.unassigned }}</td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ quarter.budget }}</td>
                         </tr>
                         {% endfor %}
+                        <tr style="background-color: #f1f5f9; font-weight: bold;">
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Annual Total</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                                <table role="presentation" width="100%" height="24" cellspacing="0" cellpadding="0" border="0" style="border-radius: 4px; border: 1px solid #ccc;">
+                                    <tr>
+                                        <!-- Filled Portion -->
+                                        <td width="{{ ae.annual_totals.completion_percentage }}%" style="background-color: #3b82f6; text-align: center; font-size: 12px; color: white; font-weight: bold;">
+                                            {{ ae.annual_totals.completion_percentage }}%
+                                        </td>
+                                        <!-- Empty Portion -->
+                                        <td width="{{ 100 - ae.annual_totals.completion_percentage }}%" style="background-color: #e2e8f0;"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ ae.annual_totals.assigned }}</td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: {{ ae.annual_totals.year_over_year_change|float >= 0 and '#059669' or '#dc2626' }};">
+                                {% if ae.previous_year_revenue_raw|float > 0 %}
+                                    {{ ae.annual_totals.year_over_year_change|float >= 0 and '+' or '' }}{{ '%0.1f' | format(ae.annual_totals.year_over_year_change|float) }}%
+                                {% else %}
+                                    New
+                                {% endif %}
+                            </td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ ae.annual_totals.unassigned }}</td>
+                            <td align="right" style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${{ ae.annual_totals.budget }}</td>
+                        </tr>
                     </tbody>
                 </table>
             </td>
         </tr>
     </table>
     {% endfor %}
+
     <!-- Final Note Section -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 900px; background-color: white; margin: 20px auto; font-family: Arial, sans-serif;">
       <tr>

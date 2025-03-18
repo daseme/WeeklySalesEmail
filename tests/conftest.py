@@ -1,8 +1,6 @@
 # tests/conftest.py
 import pytest
 import json
-import os
-from pathlib import Path
 
 
 @pytest.fixture

@@ -1,6 +1,5 @@
 import pytest
 import json
-from pathlib import Path
 import os
 from config import Config
 

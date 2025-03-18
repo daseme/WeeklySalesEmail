@@ -33,6 +33,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# LLM text of repo
+output.txt
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

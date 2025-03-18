@@ -3,7 +3,7 @@
 import sys
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict
 import traceback
 from datetime import datetime
 import argparse
@@ -13,16 +13,17 @@ from dotenv import load_dotenv
 from config import Config
 from data_processor import DataProcessor
 from email_sender import EmailSender
-from email_template_renderer import EmailTemplateRenderer, ManagementStats
+from email_template_renderer import EmailTemplateRenderer
 from sales_analytics import SalesAnalytics
 
 # Configure basic logging first
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
 
 def verify_excel_dependencies() -> None:
     """Verify required Excel-related dependencies are installed"""
@@ -37,6 +38,7 @@ def verify_excel_dependencies() -> None:
             "pip install pandas xlsxwriter openpyxl jinja2"
         ) from e
 
+
 def validate_environment(config: Config) -> None:
     """Validate required environment variables"""
     if not config.test_mode:
@@ -46,6 +48,7 @@ def validate_environment(config: Config) -> None:
             raise EnvironmentError(
                 f"Missing required environment variables: {', '.join(missing_vars)}"
             )
+
 
 def enhance_logging(config: Config, base_logger: logging.Logger) -> logging.Logger:
     """Enhance logging with file output"""
@@ -57,10 +60,10 @@ def enhance_logging(config: Config, base_logger: logging.Logger) -> logging.Logg
     log_file = log_dir / f"sales_report_{mode}_{timestamp}.log"
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    ))
-    
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+
     base_logger.addHandler(file_handler)
     base_logger.setLevel(logging.DEBUG if config.test_mode else logging.INFO)
 
@@ -68,6 +71,7 @@ def enhance_logging(config: Config, base_logger: logging.Logger) -> logging.Logg
     logging.getLogger("python_http_client").setLevel(logging.INFO)
 
     return base_logger
+
 
 def load_config(test_mode: bool = False, config_path: Optional[str] = None) -> Config:
     """Load and configure the application configuration"""
@@ -86,6 +90,7 @@ def load_config(test_mode: bool = False, config_path: Optional[str] = None) -> C
     config.validate()
     return config
 
+
 def process_ae_report(
     ae_name: str,
     report_path: str,
@@ -93,7 +98,7 @@ def process_ae_report(
     sales_analytics: SalesAnalytics,
     email_sender: EmailSender,
     logger: logging.Logger,
-    is_test: bool = False
+    is_test: bool = False,
 ) -> bool:
     """Process and send report for a single AE"""
     try:
@@ -101,7 +106,7 @@ def process_ae_report(
         logger.info(f"Processing report for {ae_name} {mode_suffix}")
 
         stats = sales_analytics.calculate_sales_stats(sales_data.report, ae_name)
-        
+
         if email_sender.send_report(ae_name, stats, report_path):
             logger.info(f"Successfully sent report to {ae_name} {mode_suffix}")
             return True
@@ -114,11 +119,12 @@ def process_ae_report(
         logger.error(traceback.format_exc())
         return False
 
+
 def send_management_report(
     sales_data,
     sales_analytics: SalesAnalytics,
     email_sender: EmailSender,
-    logger: logging.Logger
+    logger: logging.Logger,
 ) -> bool:
     """Generate and send management report"""
     try:
@@ -139,6 +145,7 @@ def send_management_report(
         logger.error(traceback.format_exc())
         return False
 
+
 def run_sales_report() -> tuple[bool, Optional[Config]]:
     """
     Main function to run the sales report generation process
@@ -152,39 +159,43 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
             description="Generate and send sales reports (Excel .xlsx format)"
         )
         parser.add_argument(
-            "-t", "--test",
+            "-t",
+            "--test",
             action="store_true",
-            help="Run in test mode (sends emails only to test address)"
+            help="Run in test mode (sends emails only to test address)",
         )
-        parser.add_argument(
-            "-c", "--config",
-            help="Path to configuration file"
-        )
+        parser.add_argument("-c", "--config", help="Path to configuration file")
 
         args = parser.parse_args()
 
         # Load environment variables
         load_dotenv()
-        
+
         # Load and validate configuration
         config = load_config(test_mode=args.test, config_path=args.config)
-        
+
         # Enhance logging with file output
         global logger
         logger = enhance_logging(config, logger)
-        
+
         # Log initial information
-        logger.info(f"Loaded .env file: SENDGRID_API_KEY length = {len(os.getenv('SENDGRID_API_KEY', ''))}")
+        logger.info(
+            f"Loaded .env file: SENDGRID_API_KEY length = {len(os.getenv('SENDGRID_API_KEY', ''))}"
+        )
         logger.info(f"Active Account Executives: {config.active_aes}")
         if args.test:
-            logger.info("Running in TEST mode - emails will only be sent to test address")
+            logger.info(
+                "Running in TEST mode - emails will only be sent to test address"
+            )
 
         # Verify dependencies and environment
         verify_excel_dependencies()
         validate_environment(config)
 
         # Initialize components
-        templates_dir = Path(config.reports_folder).parent / "WeeklySalesEmail" / "email_templates"
+        templates_dir = (
+            Path(config.reports_folder).parent / "WeeklySalesEmail" / "email_templates"
+        )
         if not templates_dir.exists():
             raise ValueError(f"Templates directory not found at: {templates_dir}")
 
@@ -196,7 +207,7 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
         # Process data
         logger.info("Processing sales data")
         sales_data, created_files = data_processor.process_data()
-        
+
         logger.info(f"Created {len(created_files)} report files")
         for file in created_files:
             logger.info(f"Created file: {file}")
@@ -216,8 +227,10 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
         if config.test_mode:
             # Test mode: process single selected AE
             print("\n=== TEST MODE ===")
-            print("Please select an Account Executive (AE) to generate and send a report for:")
-            
+            print(
+                "Please select an Account Executive (AE) to generate and send a report for:"
+            )
+
             for i, ae_name in enumerate(config.active_aes, start=1):
                 print(f"{i}. {ae_name}")
 
@@ -233,16 +246,25 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
 
             report_path = reports_created.get(ae_name)
             if report_path and process_ae_report(
-                ae_name, report_path, sales_data, sales_analytics, 
-                email_sender, logger, is_test=True
+                ae_name,
+                report_path,
+                sales_data,
+                sales_analytics,
+                email_sender,
+                logger,
+                is_test=True,
             ):
                 success_count += 1
         else:
             # Production mode: process all AEs
             for ae_name, report_path in reports_created.items():
                 if process_ae_report(
-                    ae_name, report_path, sales_data, sales_analytics, 
-                    email_sender, logger
+                    ae_name,
+                    report_path,
+                    sales_data,
+                    sales_analytics,
+                    email_sender,
+                    logger,
                 ):
                     success_count += 1
 
@@ -251,12 +273,25 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
             logger.info("Generating management report")
 
             # Step 1: Generate management stats
-            management_stats = sales_analytics.calculate_management_stats(sales_data.report)
+            management_stats = sales_analytics.calculate_management_stats(
+                sales_data.report
+            )
 
             # Step 2: Preprocess the stats to ensure proper types
             sales_analytics.preprocess_management_stats(management_stats)
+            
+            # Step 3: Get the direct calculation from the data processor
+            direct_yoy = data_processor.direct_q1_calculation['yoy_change']
+            
+            # Step 4: Directly override the Q1 YoY in management_stats
+            for quarter in management_stats.company_quarters:
+                if quarter['name'].startswith('Q1'):
+                    calculated_yoy = quarter['year_over_year_change']
+                    logger.info(f"Overriding Q1 YoY: {calculated_yoy:.2f}% -> {direct_yoy:.2f}%")
+                    quarter['year_over_year_change'] = direct_yoy
+                    break
 
-            # Step 3: Send the management stats object directly
+            # Step 5: Send the management stats object
             management_success = email_sender.send_management_report(management_stats)
             if management_success:
                 logger.info("Successfully sent management report")
@@ -271,25 +306,30 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
         # Determine overall success
         success = success_count == total_reports and management_success
         status = (
-            "SUCCESS" if success
-            else "PARTIAL SUCCESS" if success_count > 0 or management_success
+            "SUCCESS"
+            if success
+            else "PARTIAL SUCCESS"
+            if success_count > 0 or management_success
             else "FAILURE"
         )
-        
+
         logger.info(f"Process complete - {status}")
         logger.info(f"Reports sent successfully: {success_count}/{total_reports}")
-        logger.info(f"Management report status: {'Success' if management_success else 'Failed'}")
+        logger.info(
+            f"Management report status: {'Success' if management_success else 'Failed'}"
+        )
 
         return success, config
 
     except Exception as e:
-        if 'logger' in locals():
+        if "logger" in locals():
             logger.error(f"Critical error in sales report generation: {str(e)}")
             logger.error(traceback.format_exc())
         else:
             print(f"Critical error before logger initialization: {str(e)}")
             traceback.print_exc()
         return False, config
+
 
 def print_summary(start_time: datetime, success: bool, config: Config) -> None:
     """Print execution summary"""
@@ -303,11 +343,12 @@ def print_summary(start_time: datetime, success: bool, config: Config) -> None:
     print(f"Ended at: {end_time:%Y-%m-%d %H:%M:%S}")
     print(f"Total duration: {duration}")
 
+
 def main():
     """Main entry point for the application"""
     start_time = datetime.now()
     success, config = run_sales_report()
-    
+
     if config:  # Only print summary if we have a valid config
         print_summary(start_time, success, config)
     else:
@@ -315,8 +356,9 @@ def main():
         print("Status: FAILURE (Configuration error)")
         print(f"Started at: {start_time:%Y-%m-%d %H:%M:%S}")
         print(f"Ended at: {datetime.now():%Y-%m-%d %H:%M:%S}")
-    
+
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

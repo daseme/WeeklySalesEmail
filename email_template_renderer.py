@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 from jinja2 import Environment, FileSystemLoader
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,6 +11,7 @@ import base64
 @dataclass
 class QuarterData:
     """Container for quarterly budget and performance data"""
+
     name: str
     assigned: float
     unassigned: float
@@ -20,9 +21,11 @@ class QuarterData:
     previous_year_unassigned: float = 0.0
     year_over_year_change: float = 0.0
 
+
 @dataclass
 class SalesStats:
     """Container for sales statistics"""
+
     total_customers: int
     total_assigned_revenue: float
     total_unassigned_revenue: float  # Added missing field
@@ -34,9 +37,11 @@ class SalesStats:
     total_previous_year_revenue: float = 0.0
     total_year_over_year_change: float = 0.0
 
+
 @dataclass
 class ManagementStats:
     """Container for management rollup statistics"""
+
     total_revenue: float
     total_unassigned_revenue: float
     total_customers: int
@@ -48,8 +53,6 @@ class ManagementStats:
     company_quarters: List[Dict] = field(default_factory=list)
     company_total_budget: float = 0.0
     company_completion_percentage: float = 0.0
-
-
 
 
 class EmailTemplateRenderer:
@@ -123,7 +126,7 @@ class EmailTemplateRenderer:
             }
             for q in quarterly_data
         ]
-    
+
     def _format_company_quarters(self, company_quarters: List[Dict]) -> List[Dict]:
         """Ensure consistent number formatting for company quarters."""
         return [
@@ -133,7 +136,9 @@ class EmailTemplateRenderer:
                 "unassigned": self._format_currency(q["unassigned"]),
                 "budget": self._format_currency(q["budget"]),
                 "completion_percentage": round(q["completion_percentage"]),
-                "previous_year_assigned": self._format_currency(q["previous_year_assigned"]),
+                "previous_year_assigned": self._format_currency(
+                    q["previous_year_assigned"]
+                ),
                 "year_over_year_change": round(q["year_over_year_change"], 1),
             }
             for q in company_quarters
@@ -175,20 +180,22 @@ class EmailTemplateRenderer:
         for ae in ae_data:
             # Calculate totals for each AE
             total_budget = sum(float(quarter["budget"]) for quarter in ae["quarters"])
-            total_unassigned = sum(float(quarter["unassigned"]) for quarter in ae["quarters"])
-            
+            total_unassigned = sum(
+                float(quarter["unassigned"]) for quarter in ae["quarters"]
+            )
+
             # Ensure numeric values for comparisons
             total_assigned_revenue = float(ae["total_assigned_revenue"])
             previous_year_revenue = float(ae.get("previous_year_revenue", 0))
-            previous_year_revenue_raw = float(ae.get("previous_year_revenue_raw", previous_year_revenue))
+            previous_year_revenue_raw = float(
+                ae.get("previous_year_revenue_raw", previous_year_revenue)
+            )
             year_over_year_change = float(ae.get("year_over_year_change", 0))
             total_customers = int(ae["total_customers"])
             previous_year_customers = int(ae.get("previous_year_customers", 0))
 
             total_completion_percentage = round(
-                (total_assigned_revenue / total_budget * 100)
-                if total_budget > 0
-                else 0
+                (total_assigned_revenue / total_budget * 100) if total_budget > 0 else 0
             )
 
             formatted_ae = {
@@ -203,33 +210,51 @@ class EmailTemplateRenderer:
                 # Formatted values for display
                 "total_assigned_revenue": self._format_currency(total_assigned_revenue),
                 "avg_per_customer": self._format_currency(
-                    total_assigned_revenue / total_customers if total_customers > 0 else 0
+                    total_assigned_revenue / total_customers
+                    if total_customers > 0
+                    else 0
                 ),
                 "total_unassigned": self._format_currency(total_unassigned),
                 "total_budget": self._format_currency(total_budget),
-                "previous_year_revenue_display": self._format_currency(previous_year_revenue),
+                "previous_year_revenue_display": self._format_currency(
+                    previous_year_revenue
+                ),
                 "total_completion_percentage": total_completion_percentage,
                 "quarters": [
                     {
                         "name": quarter["name"],
                         # Raw values for comparisons
                         "assigned_raw": float(quarter["assigned"]),
-                        "previous_year_assigned_raw": float(quarter.get("previous_year_assigned", 0)),
-                        "year_over_year_change": float(quarter.get("year_over_year_change", 0)),
+                        "previous_year_assigned_raw": float(
+                            quarter.get("previous_year_assigned", 0)
+                        ),
+                        "year_over_year_change": float(
+                            quarter.get("year_over_year_change", 0)
+                        ),
                         # Formatted values for display
                         "assigned": self._format_currency(float(quarter["assigned"])),
-                        "unassigned": self._format_currency(float(quarter["unassigned"])),
+                        "unassigned": self._format_currency(
+                            float(quarter["unassigned"])
+                        ),
                         "budget": self._format_currency(float(quarter["budget"])),
-                        "previous_year_assigned": float(quarter.get("previous_year_assigned", 0)),  # Keep as number for comparison
+                        "previous_year_assigned": float(
+                            quarter.get("previous_year_assigned", 0)
+                        ),  # Keep as number for comparison
                         "previous_year_assigned_display": self._format_currency(
                             float(quarter.get("previous_year_assigned", 0))
                         ),
-                        "previous_year_unassigned": float(quarter.get("previous_year_unassigned", 0)),
+                        "previous_year_unassigned": float(
+                            quarter.get("previous_year_unassigned", 0)
+                        ),
                         "previous_year_unassigned_display": self._format_currency(
                             float(quarter.get("previous_year_unassigned", 0))
                         ),
                         "completion_percentage": round(
-                            (float(quarter["assigned"]) / float(quarter["budget"]) * 100)
+                            (
+                                float(quarter["assigned"])
+                                / float(quarter["budget"])
+                                * 100
+                            )
                             if float(quarter["budget"]) > 0
                             else 0
                         ),
@@ -249,9 +274,11 @@ class EmailTemplateRenderer:
                     "assigned": self._format_currency(total_assigned_revenue),
                     "unassigned": self._format_currency(total_unassigned),
                     "budget": self._format_currency(total_budget),
-                    "previous_year_assigned": self._format_currency(previous_year_revenue),
-                    "completion_percentage": total_completion_percentage
-                }
+                    "previous_year_assigned": self._format_currency(
+                        previous_year_revenue
+                    ),
+                    "completion_percentage": total_completion_percentage,
+                },
             }
             formatted_data.append(formatted_ae)
         return formatted_data
@@ -310,28 +337,50 @@ class EmailTemplateRenderer:
                     "assigned": self._format_currency(quarter.get("assigned", 0)),
                     "unassigned": self._format_currency(quarter.get("unassigned", 0)),
                     "budget": self._format_currency(quarter.get("budget", 0)),
-                    "completion_percentage": round(quarter.get("completion_percentage", 0)),
-                    "previous_year_assigned": self._format_currency(quarter.get("previous_year_assigned", 0)),
-                    "previous_year_assigned_raw": quarter.get("previous_year_assigned", 0),  # Keep raw value for logic
-                    "previous_year_assigned_display": self._format_currency(quarter.get("previous_year_assigned", 0)),
-                    "year_over_year_change": round(quarter.get("year_over_year_change", 0), 1),
+                    "completion_percentage": round(
+                        quarter.get("completion_percentage", 0)
+                    ),
+                    "previous_year_assigned": self._format_currency(
+                        quarter.get("previous_year_assigned", 0)
+                    ),
+                    "previous_year_assigned_raw": quarter.get(
+                        "previous_year_assigned", 0
+                    ),  # Keep raw value for logic
+                    "previous_year_assigned_display": self._format_currency(
+                        quarter.get("previous_year_assigned", 0)
+                    ),
+                    "year_over_year_change": round(
+                        quarter.get("year_over_year_change", 0), 1
+                    ),
                 }
                 for quarter in stats.company_quarters
             ]
 
             context = {
                 "total_revenue": self._format_currency(stats.total_revenue),
-                "total_previous_year_revenue": self._format_currency(stats.total_previous_year_revenue),
+                "total_previous_year_revenue": self._format_currency(
+                    stats.total_previous_year_revenue
+                ),
                 "total_previous_year_revenue_raw": stats.total_previous_year_revenue,  # Keep raw value
-                "total_previous_year_revenue_display": self._format_currency(stats.total_previous_year_revenue),
-                "total_year_over_year_change": round(stats.total_year_over_year_change, 1),
+                "total_previous_year_revenue_display": self._format_currency(
+                    stats.total_previous_year_revenue
+                ),
+                "total_year_over_year_change": round(
+                    stats.total_year_over_year_change, 1
+                ),
                 "total_customers": int(stats.total_customers),
                 "previous_year_customers": int(stats.previous_year_customers),
                 "company_quarters": formatted_company_quarters,
-                "company_total_budget": self._format_currency(stats.company_total_budget),
-                "company_completion_percentage": round(stats.company_completion_percentage),
-                "total_unassigned_revenue": self._format_currency(stats.total_unassigned_revenue),
-                "ae_data": formatted_ae_data
+                "company_total_budget": self._format_currency(
+                    stats.company_total_budget
+                ),
+                "company_completion_percentage": round(
+                    stats.company_completion_percentage
+                ),
+                "total_unassigned_revenue": self._format_currency(
+                    stats.total_unassigned_revenue
+                ),
+                "ae_data": formatted_ae_data,
             }
 
             return template.render(**context)

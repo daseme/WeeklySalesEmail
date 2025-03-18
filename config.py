@@ -3,7 +3,6 @@ from typing import Dict, List
 import os
 from pathlib import Path
 import json
-from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -42,8 +41,9 @@ class Config:
     account_executives: Dict[str, AccountExecutive]
     test_mode: bool = False
     test_email: str = None
-    logo_path: str = os.path.join(os.path.dirname(__file__), "email_templates", "logo.png")
-
+    logo_path: str = os.path.join(
+        os.path.dirname(__file__), "email_templates", "logo.png"
+    )
 
     @property
     def active_aes(self) -> List[str]:

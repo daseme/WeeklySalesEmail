@@ -1,5 +1,4 @@
 import os
-from typing import List, Optional
 import pandas as pd
 import xlsxwriter
 from xlsxwriter.workbook import Workbook
@@ -103,7 +102,13 @@ class ExcelFormatter:
         finally:
             workbook.close()
 
-    def _format_sheet1(self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData, ae_name: str):
+    def _format_sheet1(
+        self,
+        workbook: Workbook,
+        worksheet: Worksheet,
+        sales_data: SalesData,
+        ae_name: str,
+    ):
         """Format the main sales report sheet for the given Account Executive."""
         money_fmt = workbook.add_format({"num_format": 42, "align": "center"})
         text_fmt = workbook.add_format({"align": "left"})
@@ -136,7 +141,6 @@ class ExcelFormatter:
 
         worksheet.freeze_panes(1, 0)
         worksheet.set_zoom(90)
-
 
     def _format_sheet2(
         self, workbook: Workbook, worksheet: Worksheet, sales_data: SalesData

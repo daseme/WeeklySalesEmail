@@ -6,9 +6,16 @@ from datetime import datetime
 import logging
 import sendgrid
 from sendgrid.helpers.mail import (
-    Mail, Email, To, Content, Attachment,
-    FileContent, FileType, FileName, 
-    Disposition, ContentId
+    Mail,
+    Email,
+    To,
+    Content,
+    Attachment,
+    FileContent,
+    FileType,
+    FileName,
+    Disposition,
+    ContentId,
 )
 from config import Config
 from email_template_renderer import EmailTemplateRenderer
@@ -17,6 +24,7 @@ from email_template_renderer import EmailTemplateRenderer
 @dataclass
 class SalesStats:
     """Container for sales statistics"""
+
     total_customers: int
     total_assigned_revenue: float
     quarterly_totals: Dict[str, float]
@@ -27,6 +35,7 @@ class SalesStats:
 @dataclass
 class ManagementStats:
     """Container for management rollup statistics"""
+
     total_revenue: float
     total_unassigned_revenue: float
     total_customers: int
@@ -40,9 +49,10 @@ class EmailSender:
         self.template_renderer = template_renderer
         logger = logging.getLogger(__name__)
         api_key = config.sendgrid_api_key
-        logger.debug(f"API Key starts with: {api_key[:5]}... and is {len(api_key)} characters long")
+        logger.debug(
+            f"API Key starts with: {api_key[:5]}... and is {len(api_key)} characters long"
+        )
         self.sg = sendgrid.SendGridAPIClient(api_key=api_key)
-
 
     def send_report(self, ae_name: str, stats: SalesStats, report_path: str) -> bool:
         """Send email with report attachment to specified recipients"""
@@ -59,7 +69,9 @@ class EmailSender:
 
             response = self.sg.send(mail)
             if response.status_code not in [200, 201, 202]:
-                raise Exception(f"Error sending email. Status code: {response.status_code}")
+                raise Exception(
+                    f"Error sending email. Status code: {response.status_code}"
+                )
 
             logger.info(f"Email sent successfully to {ae_name}'s team!")
             return True
@@ -68,7 +80,6 @@ class EmailSender:
             logger.error(f"Error sending email to {ae_name}: {str(e)}")
             return False
 
-
     def send_management_report(self, stats: ManagementStats) -> bool:
         """Send management rollup report"""
         logger = logging.getLogger(__name__)
@@ -76,7 +87,7 @@ class EmailSender:
             recipients = self.config.management_recipients
             if isinstance(recipients, list) and len(recipients) == 1:
                 # Split the comma-separated string into a list of emails
-                recipients = recipients[0].split(',')
+                recipients = recipients[0].split(",")
 
             if not recipients:
                 raise ValueError("No management recipients configured")
@@ -87,7 +98,9 @@ class EmailSender:
             response = self.sg.send(mail)
 
             if response.status_code not in [200, 201, 202]:
-                raise Exception(f"Error sending management email. Status code: {response.status_code}")
+                raise Exception(
+                    f"Error sending management email. Status code: {response.status_code}"
+                )
 
             logger.info(f"Management rollup email sent successfully to {recipients}!")
             return True
@@ -96,7 +109,6 @@ class EmailSender:
             logger.error(f"Error sending management email: {str(e)}")
             return False
 
-
     def _get_recipients(self, ae_name: str) -> List[str]:
         """Get recipient list for the AE"""
         recipients = self.config.email_recipients.get(ae_name, [])
@@ -104,41 +116,45 @@ class EmailSender:
             raise ValueError(f"No recipients found for {ae_name}")
         return recipients
 
-    def _create_mail_object(self, ae_name: str, recipients: List[str], stats: SalesStats) -> Mail:
+    def _create_mail_object(
+        self, ae_name: str, recipients: List[str], stats: SalesStats
+    ) -> Mail:
         """Create mail object for individual AE report"""
         current_year = datetime.now().year
         subject = f"{ae_name} - Your {current_year} Weekly Sales Report"
         html_content = Content(
-            "text/html",
-            self.template_renderer.render_sales_report(ae_name, stats)
+            "text/html", self.template_renderer.render_sales_report(ae_name, stats)
         )
 
         mail = Mail(
             from_email=Email(self.config.sender_email),
             subject=subject,
             to_emails=[To(email) for email in recipients],
-            html_content=html_content
+            html_content=html_content,
         )
 
         return mail
 
-    def _create_management_mail(self, stats: ManagementStats, recipients: List[str]) -> Mail:
+    def _create_management_mail(
+        self, stats: ManagementStats, recipients: List[str]
+    ) -> Mail:
         """Create mail object for management report."""
-        subject = f"Weekly Sales Management Report - {datetime.now().strftime('%Y-%m-%d')}"
+        subject = (
+            f"Weekly Sales Management Report - {datetime.now().strftime('%Y-%m-%d')}"
+        )
         html_content = self.template_renderer.render_management_report(stats)
 
         mail = Mail(
             from_email=self.config.sender_email,  # Keep this as it was originally
             to_emails=recipients,  # Keep this as a list of strings
             subject=subject,
-            html_content=html_content
+            html_content=html_content,
         )
 
         # Attach the logo
         self._attach_logo(mail)
 
         return mail
-
 
     def _add_attachment(self, mail: Mail, file_path: str) -> None:
         """Add Excel file as attachment to email"""
@@ -160,7 +176,7 @@ class EmailSender:
 
         except Exception as e:
             raise RuntimeError(f"Error adding attachment: {str(e)}")
-        
+
     def _attach_logo(self, mail: Mail) -> None:
         """Attach company logo as an inline image."""
         logger = logging.getLogger(__name__)
@@ -179,7 +195,7 @@ class EmailSender:
                 file_type=FileType("image/png"),
                 file_name=FileName("company_logo.png"),
                 disposition=Disposition("inline"),
-                content_id=ContentId("company_logo")
+                content_id=ContentId("company_logo"),
             )
 
             mail.add_attachment(attachment)

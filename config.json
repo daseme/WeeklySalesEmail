@@ -1,7 +1,7 @@
 {
-    "root_path": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial",
-    "reports_folder": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/reports",
-    "vba_path": "C:/Users/Kurt/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/vbaProject.bin",
+    "root_path": "C:/Users/daseme/Crossings TV Dropbox/kurt olmstead/Financial",
+    "reports_folder": "C:/Users/daseme/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/reports",
+    "vba_path": "C:/Users/daseme/Crossings TV Dropbox/kurt olmstead/Financial/Sales/WeeklyReports/vbaProject.bin",
     "sendgrid_api_key": "YOUR_SENDGRID_API_KEY_HERE",
     "sender_email": "portaladmin@crossingstv.com",
     "test_mode": false,
