@@ -59,7 +59,7 @@ jobs:
         run: python scripts/team_dropbox_upload.py
       
       - name: Upload logs and reports as artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v1.0.0
         with:
           name: sales-reports-${{ github.run_id }}
           path: |
