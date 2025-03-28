@@ -174,7 +174,7 @@ def download_latest_forecast(token, team_member_id, config):
     if not latest_file:
         return False
 
-    local_path = os.path.join(DATA_DIR, "forecast", os.path.basename(latest_file))
+    local_path = os.path.join(DATA_DIR, "Forecast", os.path.basename(latest_file))
     return download_file(token, team_member_id, latest_file, local_path)
 
 
