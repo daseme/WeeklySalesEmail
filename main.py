@@ -223,7 +223,7 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
         success_count = 0
         total_reports = len(reports_created)
         logger.info(f"Sending {total_reports} reports")
-        
+
         if config.test_mode:
             # We detect if we're running in GitHub Actions (no interactive prompt).
             if os.getenv("GITHUB_ACTIONS"):
@@ -319,14 +319,16 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
             management_success = False
 
         # Determine overall success
-        success = success_count == total_reports and management_success
-        status = (
-            "SUCCESS"
-            if success
-            else "PARTIAL SUCCESS"
-            if success_count > 0 or management_success
-            else "FAILURE"
-        )
+        # Determine overall success
+        if config.test_mode:
+            # In test mode, we only process one AE, so consider it a success
+            # if at least one report was sent successfully and the management report was sent.
+            success = (success_count > 0) and management_success
+        else:
+            # In production, all AE reports must be sent
+            success = (success_count == total_reports) and management_success
+
+        status = "SUCCESS" if success else "FAILURE"
 
         logger.info(f"Process complete - {status}")
         logger.info(f"Reports sent successfully: {success_count}/{total_reports}")
