@@ -54,15 +54,3 @@ jobs:
           else
             python main.py
           fi
-      
-      - name: Upload reports to Dropbox
-        run: python scripts/team_dropbox_upload.py
-      
-      - name: Upload logs and reports as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: sales-reports-${{ github.run_id }}
-          path: |
-            data/reports/**/*.xlsx
-            data/reports/logs/*.log
-          retention-days: 14
