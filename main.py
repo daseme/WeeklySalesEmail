@@ -223,50 +223,63 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
         success_count = 0
         total_reports = len(reports_created)
         logger.info(f"Sending {total_reports} reports")
-
+        
         if config.test_mode:
-            # Test mode: process single selected AE
-            print("\n=== TEST MODE ===")
-            print(
-                "Please select an Account Executive (AE) to generate and send a report for:"
-            )
+            # We detect if we're running in GitHub Actions (no interactive prompt).
+            if os.getenv("GITHUB_ACTIONS"):
+                # Optional: Let you pick which AE to send the test report to via an env var.
+                test_ae_name = os.getenv("TEST_AE_NAME", "").strip()
 
-            for i, ae_name in enumerate(config.active_aes, start=1):
-                print(f"{i}. {ae_name}")
+                if test_ae_name and test_ae_name in config.active_aes:
+                    ae_name = test_ae_name
+                    logger.info(f"TEST MODE (CI): Using AE from TEST_AE_NAME env var: {ae_name}")
+                else:
+                    # Fallback: pick the first AE if TEST_AE_NAME not set or invalid
+                    ae_name = config.active_aes[0]
+                    logger.info(f"TEST MODE (CI): No valid AE in TEST_AE_NAME, defaulting to: {ae_name}")
 
-            while True:
-                try:
-                    selection = int(input("Enter the number of the AE: "))
-                    if 1 <= selection <= len(config.active_aes):
-                        ae_name = config.active_aes[selection - 1]
-                        break
-                    print("Invalid selection. Please enter a number from the list.")
-                except ValueError:
-                    print("Invalid input. Please enter a number.")
-
-            report_path = reports_created.get(ae_name)
-            if report_path and process_ae_report(
-                ae_name,
-                report_path,
-                sales_data,
-                sales_analytics,
-                email_sender,
-                logger,
-                is_test=True,
-            ):
-                success_count += 1
-        else:
-            # Production mode: process all AEs
-            for ae_name, report_path in reports_created.items():
-                if process_ae_report(
+                report_path = reports_created.get(ae_name)
+                if report_path and process_ae_report(
                     ae_name,
                     report_path,
                     sales_data,
                     sales_analytics,
                     email_sender,
                     logger,
+                    is_test=True,
                 ):
                     success_count += 1
+
+            else:
+                # Local usage: same interactive logic as before
+                print("\n=== TEST MODE ===")
+                print("Please select an Account Executive (AE) to generate and send a report for:")
+
+                for i, ae_name in enumerate(config.active_aes, start=1):
+                    print(f"{i}. {ae_name}")
+
+                while True:
+                    try:
+                        selection = int(input("Enter the number of the AE: "))
+                        if 1 <= selection <= len(config.active_aes):
+                            ae_name = config.active_aes[selection - 1]
+                            break
+                        print("Invalid selection. Please enter a number from the list.")
+                    except ValueError:
+                        print("Invalid input. Please enter a number.")
+
+                report_path = reports_created.get(ae_name)
+                if report_path and process_ae_report(
+                    ae_name,
+                    report_path,
+                    sales_data,
+                    sales_analytics,
+                    email_sender,
+                    logger,
+                    is_test=True,
+                ):
+                    success_count += 1
+
 
         # Send management report
         try:
