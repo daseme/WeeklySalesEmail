@@ -17,6 +17,7 @@ class Budget:
     q3: float
     q4: float
 
+
 @dataclass
 class SalesData:
     """Container for processed sales data"""
@@ -54,19 +55,19 @@ class DataProcessor:
         import pandas as pd
         import tempfile
         import os
-        
+
         logger = logging.getLogger(__name__)
         logger.info(f"Extracting unfiltered data from {excel_file}, sheet {sheet_name}")
-        
+
         # Create a temporary CSV file
-        with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_file:
             temp_csv = temp_file.name
-        
+
         try:
             # Load the workbook and get the sheet
             wb = openpyxl.load_workbook(excel_file, data_only=True)
             sheet = wb[sheet_name]
-            
+
             # Extract all data cell by cell to ensure no filters are applied
             data = []
             headers = None
@@ -76,23 +77,25 @@ class DataProcessor:
                     headers = row_data
                 else:
                     data.append(row_data)
-            
+
             # Create DataFrame from raw data
             df = pd.DataFrame(data, columns=headers)
-            
+
             # Save to CSV temporarily (removes all Excel formatting/filters)
             df.to_csv(temp_csv, index=False)
-            
+
             # Read back the CSV (clean data)
             clean_df = pd.read_csv(temp_csv)
-            logger.info(f"Successfully extracted {len(clean_df)} rows of unfiltered data")
-            
+            logger.info(
+                f"Successfully extracted {len(clean_df)} rows of unfiltered data"
+            )
+
             return clean_df
-        
+
         except Exception as e:
             logger.error(f"Error extracting unfiltered data: {str(e)}")
             raise
-        
+
         finally:
             # Clean up the temporary file
             if os.path.exists(temp_csv):
@@ -101,70 +104,70 @@ class DataProcessor:
     def calculate_direct_yoy_change(self, df, year1, year2, start_month=1, end_month=3):
         """
         Calculate YoY change directly from monthly columns
-        
+
         Args:
             df: DataFrame with monthly data columns
             year1: Previous year (e.g., 2024)
             year2: Current year (e.g., 2025)
             start_month: First month of quarter (default: 1 for Q1)
             end_month: Last month of quarter (default: 3 for Q1)
-        
+
         Returns:
             Dictionary with totals and YoY change
         """
         logger = logging.getLogger(__name__)
-        
+
         # Define month columns for each year
         year1_cols = [f"{m}/1/{year1}" for m in range(start_month, end_month + 1)]
         year2_cols = [f"{m}/1/{year2}" for m in range(start_month, end_month + 1)]
-        
+
         # Sum values for each year
         year1_total = 0
         year2_total = 0
-        
+
         # Validate columns exist
         missing_cols = []
         for col in year1_cols + year2_cols:
             if col not in df.columns:
                 missing_cols.append(col)
-        
+
         if missing_cols:
             logger.warning(f"Missing columns: {missing_cols}")
-        
+
         # Calculate totals for previous year
         for col in year1_cols:
             if col in df.columns:
                 # Convert string values to numeric, handling currency symbols
-                if df[col].dtype == 'object':
-                    df[col] = df[col].replace('[$,]', '', regex=True).astype(float)
+                if df[col].dtype == "object":
+                    df[col] = df[col].replace("[$,]", "", regex=True).astype(float)
                 col_sum = df[col].sum()
                 logger.info(f"{col} sum: ${col_sum:,.2f}")
                 year1_total += col_sum
-        
+
         # Calculate totals for current year
         for col in year2_cols:
             if col in df.columns:
                 # Convert string values to numeric, handling currency symbols
-                if df[col].dtype == 'object':
-                    df[col] = df[col].replace('[$,]', '', regex=True).astype(float)
+                if df[col].dtype == "object":
+                    df[col] = df[col].replace("[$,]", "", regex=True).astype(float)
                 col_sum = df[col].sum()
                 logger.info(f"{col} sum: ${col_sum:,.2f}")
                 year2_total += col_sum
-        
+
         # Calculate YoY change
         if year1_total > 0:
             yoy_change = ((year2_total - year1_total) / year1_total) * 100
         else:
-            yoy_change = float('inf')  # Undefined if previous year had zero revenue
-        
+            yoy_change = float("inf")  # Undefined if previous year had zero revenue
+
         logger.info(f"Direct calculation: {year1} total: ${year1_total:,.2f}")
         logger.info(f"Direct calculation: {year2} total: ${year2_total:,.2f}")
         logger.info(f"Direct calculation: YoY change: {yoy_change:.2f}%")
-        
+
         return {
-            'previous_year_total': year1_total,
-            'current_year_total': year2_total,
-            'yoy_change': yoy_change
+            "previous_year_total": year1_total,
+            "current_year_total": year2_total,
+            "yoy_change": yoy_change,
         }
 
     def process_data(self) -> Tuple[SalesData, List[str]]:
@@ -173,21 +176,23 @@ class DataProcessor:
         try:
             infile = self.get_latest_forecast_file()
             logger.info(f"Processing file: {infile}")
-            
+
             # Extract unfiltered data first
             raw_df = self.get_unfiltered_data(infile, "RevenueDB")
-            
+
             # Calculate direct YoY before any processing
             current_year = datetime.now().year
             previous_year = current_year - 1
-            
+
             # Calculate Q1 YoY directly
-            q1_direct = self.calculate_direct_yoy_change(raw_df, previous_year, current_year, 1, 3)
+            q1_direct = self.calculate_direct_yoy_change(
+                raw_df, previous_year, current_year, 1, 3
+            )
             logger.info(f"DIRECT Q1 YoY CALCULATION: {q1_direct['yoy_change']:.2f}%")
-            
+
             # Store the direct calculation for later use
             self.direct_q1_calculation = q1_direct
-            
+
             # Continue with regular processing but use the unfiltered data
             df = raw_df
             logger.info(f"Read {len(df)} rows from Excel")

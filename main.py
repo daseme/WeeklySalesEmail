@@ -279,16 +279,18 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
 
             # Step 2: Preprocess the stats to ensure proper types
             sales_analytics.preprocess_management_stats(management_stats)
-            
+
             # Step 3: Get the direct calculation from the data processor
-            direct_yoy = data_processor.direct_q1_calculation['yoy_change']
-            
+            direct_yoy = data_processor.direct_q1_calculation["yoy_change"]
+
             # Step 4: Directly override the Q1 YoY in management_stats
             for quarter in management_stats.company_quarters:
-                if quarter['name'].startswith('Q1'):
-                    calculated_yoy = quarter['year_over_year_change']
-                    logger.info(f"Overriding Q1 YoY: {calculated_yoy:.2f}% -> {direct_yoy:.2f}%")
-                    quarter['year_over_year_change'] = direct_yoy
+                if quarter["name"].startswith("Q1"):
+                    calculated_yoy = quarter["year_over_year_change"]
+                    logger.info(
+                        f"Overriding Q1 YoY: {calculated_yoy:.2f}% -> {direct_yoy:.2f}%"
+                    )
+                    quarter["year_over_year_change"] = direct_yoy
                     break
 
             # Step 5: Send the management stats object

@@ -228,16 +228,20 @@ class SalesAnalytics:
     def calculate_company_quarterly_data(self, df: pd.DataFrame) -> List[dict]:
         """Calculate quarterly data for the entire company with corrected YoY changes."""
         logger = logging.getLogger(__name__)
-        
+
         # Setup year/quarter references
         current_year = str(datetime.now().year)[2:]
         previous_year = str(int(current_year) - 1)
         current_quarters = [f"{current_year}Q{q}" for q in range(1, 5)]
         previous_quarters = [f"{previous_year}Q{q}" for q in range(1, 5)]
-        
+
         # Log the quarters being analyzed for debugging
-        logger.debug(f"Analyzing quarters: Current year ({current_year}): {current_quarters}")
-        logger.debug(f"Analyzing quarters: Previous year ({previous_year}): {previous_quarters}")
+        logger.debug(
+            f"Analyzing quarters: Current year ({current_year}): {current_quarters}"
+        )
+        logger.debug(
+            f"Analyzing quarters: Previous year ({previous_year}): {previous_quarters}"
+        )
 
         # Split data into assigned and unassigned
         assigned_data = df[df["Sector"] != "AAA - UNASSIGNED"]
@@ -253,15 +257,19 @@ class SalesAnalytics:
             assigned = assigned_data[current_q].sum()
             unassigned = unassigned_data[current_q].sum()
             previous_assigned = assigned_data[previous_q].sum()
-            
+
             # Log the raw values for verification
             logger.debug(f"Q{q}: Current Year Assigned Revenue: ${assigned:,.2f}")
-            logger.debug(f"Q{q}: Previous Year Assigned Revenue: ${previous_assigned:,.2f}")
+            logger.debug(
+                f"Q{q}: Previous Year Assigned Revenue: ${previous_assigned:,.2f}"
+            )
             logger.debug(f"Q{q}: Current Year Unassigned Revenue: ${unassigned:,.2f}")
 
             # ADD THIS LINE SPECIFICALLY FOR Q1 (right here)
             if q == 1:
-                logger.debug(f"DETAILED Q1 COMPARISON: 2025 Q1=${assigned:,.2f}, 2024 Q1=${previous_assigned:,.2f}, Calculation=({assigned:,.2f}-{previous_assigned:,.2f})/{previous_assigned:,.2f}*100 = {((assigned - previous_assigned) / previous_assigned * 100):,.2f}%")
+                logger.debug(
+                    f"DETAILED Q1 COMPARISON: 2025 Q1=${assigned:,.2f}, 2024 Q1=${previous_assigned:,.2f}, Calculation=({assigned:,.2f}-{previous_assigned:,.2f})/{previous_assigned:,.2f}*100 = {((assigned - previous_assigned) / previous_assigned * 100):,.2f}%"
+                )
 
             # Calculate budget for this quarter
             budget = sum(
@@ -274,16 +282,18 @@ class SalesAnalytics:
             completion_percentage = (assigned / budget * 100) if budget > 0 else 0
 
             # FIXED: Calculate year-over-year change correctly
-            # If previous_assigned is 0, we want to indicate this as "new revenue" 
+            # If previous_assigned is 0, we want to indicate this as "new revenue"
             # rather than 0% change
             if previous_assigned > 0:
                 # Correct formula: ((current - previous) / previous) * 100
                 # A negative value means a decrease
                 yoy_change = ((assigned - previous_assigned) / previous_assigned) * 100
-                logger.debug(f"Q{q} YoY Change: {yoy_change:.2f}% (${assigned:,.2f} vs ${previous_assigned:,.2f})")
+                logger.debug(
+                    f"Q{q} YoY Change: {yoy_change:.2f}% (${assigned:,.2f} vs ${previous_assigned:,.2f})"
+                )
             else:
                 # If there was no revenue last year, mark as "new revenue" with null percentage
-                yoy_change = float('inf')  # Could also use None or a special indicator
+                yoy_change = float("inf")  # Could also use None or a special indicator
                 logger.debug(f"Q{q} YoY Change: New Revenue (no previous year revenue)")
 
             quarter_data = {
@@ -307,14 +317,14 @@ class SalesAnalytics:
     def calculate_management_stats(self, sales_data: pd.DataFrame) -> ManagementStats:
         """Calculate management-level statistics with fixed YoY calculations."""
         logger = logging.getLogger(__name__)
-        
+
         # Create a copy of the data and setup year/quarter references
         df = sales_data.copy()
         current_year = str(datetime.now().year)[2:]
         previous_year = str(int(current_year) - 1)
         current_quarters = [f"{current_year}Q{q}" for q in range(1, 5)]
         previous_quarters = [f"{previous_year}Q{q}" for q in range(1, 5)]
-        
+
         logger.debug(f"Management stats: Using current quarters: {current_quarters}")
         logger.debug(f"Management stats: Using previous quarters: {previous_quarters}")
 
@@ -339,19 +349,23 @@ class SalesAnalytics:
                 "Customer"
             ].unique()
         )
-        
+
         # Log the raw totals for verification
         logger.debug(f"Total Current Year Revenue: ${total_revenue:,.2f}")
-        logger.debug(f"Total Previous Year Revenue: ${total_previous_year_revenue:,.2f}")
+        logger.debug(
+            f"Total Previous Year Revenue: ${total_previous_year_revenue:,.2f}"
+        )
 
         # FIXED: Calculate year-over-year change correctly
         if total_previous_year_revenue > 0:
             total_year_over_year_change = (
-                (total_revenue - total_previous_year_revenue) / total_previous_year_revenue * 100
+                (total_revenue - total_previous_year_revenue)
+                / total_previous_year_revenue
+                * 100
             )
             logger.debug(f"Total YoY Change: {total_year_over_year_change:.2f}%")
         else:
-            total_year_over_year_change = float('inf')  # New revenue
+            total_year_over_year_change = float("inf")  # New revenue
             logger.debug("Total YoY Change: New Revenue (no previous year revenue)")
 
         # Calculate company quarterly data with the fixed function
@@ -493,30 +507,35 @@ class SalesAnalytics:
     def override_with_direct_calculation(self, management_stats):
         """Override calculated YoY with direct calculation from DataProcessor"""
         logger = logging.getLogger(__name__)
-        
+
         # Get the direct calculation from the DataProcessor
         from data_processor import DataProcessor
+
         data_processor = DataProcessor(self.config)
-        
+
         # Check if direct calculation exists
-        if hasattr(data_processor, 'direct_q1_calculation'):
+        if hasattr(data_processor, "direct_q1_calculation"):
             direct_calculation = data_processor.direct_q1_calculation
-            direct_yoy = direct_calculation['yoy_change']
-            
+            direct_yoy = direct_calculation["yoy_change"]
+
             # Find Q1 in company quarters
             for quarter in management_stats.company_quarters:
-                if quarter['name'].startswith('Q1'):
-                    calculated_yoy = quarter['year_over_year_change']
-                    logger.info(f"Overriding Q1 YoY: {calculated_yoy:.2f}% -> {direct_yoy:.2f}%")
-                    
+                if quarter["name"].startswith("Q1"):
+                    calculated_yoy = quarter["year_over_year_change"]
+                    logger.info(
+                        f"Overriding Q1 YoY: {calculated_yoy:.2f}% -> {direct_yoy:.2f}%"
+                    )
+
                     # Override with direct calculation
-                    quarter['year_over_year_change'] = direct_yoy
+                    quarter["year_over_year_change"] = direct_yoy
                     break
-            
-            logger.info("YoY calculation successfully overridden with direct calculation")
+
+            logger.info(
+                "YoY calculation successfully overridden with direct calculation"
+            )
         else:
             logger.warning("Direct calculation not available, using calculated values")
-        
+
         return management_stats
 
     def validate_data(self, sales_data_df: pd.DataFrame) -> None:
@@ -574,69 +593,75 @@ class SalesAnalytics:
             raise ValueError(
                 f"Found unauthorized AEs in data: {', '.join(invalid_aes)}"
             )
-        
+
     def validate_quarter_data(self, df: pd.DataFrame) -> None:
         """
         Validate that quarterly data exists and is correctly formatted.
         This helps catch issues with missing quarters or data assignment problems.
-        
+
         Args:
             df: DataFrame containing the quarterly data
-        
+
         Raises:
             ValueError: If quarter data is missing or malformed
         """
         logger = logging.getLogger(__name__)
-        
+
         # Get expected quarter columns
         current_year = str(datetime.now().year)[2:]
         previous_year = str(int(current_year) - 1)
         expected_quarters = []
-        
+
         for year in [previous_year, current_year]:
             for q in range(1, 5):
                 expected_quarters.append(f"{year}Q{q}")
-        
+
         # Check if all expected quarters exist in DataFrame
         missing_quarters = [q for q in expected_quarters if q not in df.columns]
         if missing_quarters:
             logger.warning(f"Missing quarter columns in data: {missing_quarters}")
-        
+
         # Check that quarter columns contain numeric data
         for quarter in [q for q in expected_quarters if q in df.columns]:
             if not pd.api.types.is_numeric_dtype(df[quarter]):
                 logger.warning(f"Quarter column {quarter} contains non-numeric data")
-            
+
             # Log quarter totals for debugging
             total = df[quarter].sum()
             logger.debug(f"Quarter {quarter} total: ${total:,.2f}")
-        
+
         # Verify Q1 2024 and Q1 2025 specifically (the problematic quarters)
         if f"{previous_year}Q1" in df.columns and f"{current_year}Q1" in df.columns:
             q1_prev = df[f"{previous_year}Q1"].sum()
             q1_curr = df[f"{current_year}Q1"].sum()
-            yoy_change = ((q1_curr - q1_prev) / q1_prev * 100) if q1_prev > 0 else float('inf')
-            
+            yoy_change = (
+                ((q1_curr - q1_prev) / q1_prev * 100) if q1_prev > 0 else float("inf")
+            )
+
             logger.info(f"Q1 {previous_year} total: ${q1_prev:,.2f}")
             logger.info(f"Q1 {current_year} total: ${q1_curr:,.2f}")
             logger.info(f"Q1 YoY change: {yoy_change:.2f}%")
-        
+
         # Check for suspicious data patterns
         # 1. Check for quarters with unusually low totals
         quarter_totals = {q: df[q].sum() for q in expected_quarters if q in df.columns}
         avg_total = sum(quarter_totals.values()) / len(quarter_totals)
         for quarter, total in quarter_totals.items():
             if total < avg_total * 0.25:  # Quarter is less than 25% of average
-                logger.warning(f"Quarter {quarter} total (${total:,.2f}) is unusually low compared to average (${avg_total:,.2f})")
-        
+                logger.warning(
+                    f"Quarter {quarter} total (${total:,.2f}) is unusually low compared to average (${avg_total:,.2f})"
+                )
+
         # 2. Check for dramatic quarter-to-quarter changes
         for i in range(1, len(expected_quarters)):
-            prev_q = expected_quarters[i-1]
+            prev_q = expected_quarters[i - 1]
             curr_q = expected_quarters[i]
             if prev_q in df.columns and curr_q in df.columns:
                 prev_total = df[prev_q].sum()
                 curr_total = df[curr_q].sum()
                 if prev_total > 0:
-                    change = ((curr_total - prev_total) / prev_total * 100)
+                    change = (curr_total - prev_total) / prev_total * 100
                     if abs(change) > 50:  # More than 50% change
-                        logger.warning(f"Large quarter-to-quarter change from {prev_q} (${prev_total:,.2f}) to {curr_q} (${curr_total:,.2f}): {change:.2f}%")
+                        logger.warning(
+                            f"Large quarter-to-quarter change from {prev_q} (${prev_total:,.2f}) to {curr_q} (${curr_total:,.2f}): {change:.2f}%"
+                        )
