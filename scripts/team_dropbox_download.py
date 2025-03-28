@@ -169,7 +169,32 @@ def download_vba_file(token, team_member_id, config):
     local_path = os.path.join(DATA_DIR, "vbaProject.bin")
     return download_file(token, team_member_id, vba_path, local_path)
 
+# In team_dropbox_download.py, find the download_email_templates function
+# And add a check at the beginning:
+
 def download_email_templates(token, team_member_id, config):
+    """Download email templates and assets"""
+    # Check if we should use repository templates instead
+    if os.environ.get("USE_REPO_TEMPLATES", "").lower() == "true":
+        logger.info("Using templates from repository instead of Dropbox")
+        # Copy from repo's email_templates directory to data/email_templates
+        repo_templates_dir = "email_templates"
+        local_template_dir = os.path.join(DATA_DIR, "email_templates")
+        
+        # Create templates directory
+        os.makedirs(local_template_dir, exist_ok=True)
+        
+        # Copy all files from repo templates to data directory
+        for item in os.listdir(repo_templates_dir):
+            if os.path.isfile(os.path.join(repo_templates_dir, item)):
+                shutil.copy(
+                    os.path.join(repo_templates_dir, item),
+                    os.path.join(local_template_dir, item)
+                )
+        logger.info(f"Copied templates from repository to {local_template_dir}")
+        return True
+    
+    # Original code continues here...
     """Download email templates and assets"""
     template_path = config.get("dropbox_templates_path", "/Financial/Sales/WeeklySalesEmail/email_templates")
     local_template_dir = os.path.join(DATA_DIR, "email_templates")

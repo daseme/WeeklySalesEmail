@@ -44,6 +44,7 @@ jobs:
       
       - name: Download files from Dropbox
         run: python scripts/team_dropbox_download.py
+        USE_REPO_TEMPLATES: "true"  # Add this line
       
       - name: Run sales report generator
         run: |
