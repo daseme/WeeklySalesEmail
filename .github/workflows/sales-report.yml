@@ -44,6 +44,11 @@ jobs:
      
       - name: Download files from Dropbox
         run: python scripts/team_dropbox_download.py
+
+      - name: Override config for CI
+        run: |
+          jq '.root_path = .ci_root_path | .reports_folder = .ci_reports_folder | .vba_path = .ci_vba_path' config.json > tmp.json
+          mv tmp.json config.json  
      
       - name: Run sales report generator
         run: |
