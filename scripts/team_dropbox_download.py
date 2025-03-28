@@ -28,7 +28,7 @@ DATA_DIR = "data"
 REQUIRED_DIRS = [
     "data/reports",
     "data/reports/logs",
-    "data/forecast",
+    "data/Forecast",
     "data/email_templates",
 ]
 
