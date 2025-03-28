@@ -198,7 +198,8 @@ def download_email_templates(token, team_member_id, config):
         logger.info("Using templates from repository instead of Dropbox")
         # Copy from repo's email_templates directory to data/email_templates
         repo_templates_dir = "email_templates"
-        local_template_dir = os.path.join(DATA_DIR, "email_templates")
+        local_template_dir = os.path.join(DATA_DIR, "WeeklySalesEmail", "email_templates")
+
 
         # Create templates directory
         os.makedirs(local_template_dir, exist_ok=True)
@@ -218,7 +219,7 @@ def download_email_templates(token, team_member_id, config):
     template_path = config.get(
         "dropbox_templates_path", "/Financial/Sales/WeeklySalesEmail/email_templates"
     )
-    local_template_dir = os.path.join(DATA_DIR, "email_templates")
+    local_template_dir = os.path.join(DATA_DIR, "WeeklySalesEmail", "email_templates")
 
     # Create templates directory
     os.makedirs(local_template_dir, exist_ok=True)
