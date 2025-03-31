@@ -4,7 +4,9 @@
 
 This document explains how our automated sales report system works. The system uses GitHub's "workflow" feature to automatically generate and distribute sales reports on a regular schedule. Think of it as a robot assistant that handles repetitive tasks for us without manual intervention.
 
-![Weekly Sales Report Workflow Diagram](./sales-workflow-svg.svg "Visual representation of the sales report workflow process")
+## Workflow Visualization
+
+![Weekly Sales Report Workflow Diagram](workflow-diagram.png "Visual representation of the sales report workflow process")
 *Figure 1: Visual representation of the sales report workflow process*
 
 ## When Does It Run?
@@ -98,7 +100,13 @@ If the workflow fails:
 
 ## Visual Workflow Reference
 
-For a more detailed visual reference of this process, refer to Figure 1 at the beginning of this document. The diagram illustrates how each component connects and the exact sequence of operations that occur during the execution of the workflow.
+For a more detailed understanding of this process, refer to Figure 1 at the beginning of this document. The diagram illustrates:
+
+- The two trigger methods (automatic and manual with test mode option)
+- The workspace setup process
+- The Dropbox authentication flow and token refresh mechanism
+- The data retrieval process
+- The report generation and distribution workflow
 
 ---
 
