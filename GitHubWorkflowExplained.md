@@ -4,6 +4,9 @@
 
 This document explains how our automated sales report system works. The system uses GitHub's "workflow" feature to automatically generate and distribute sales reports on a regular schedule. Think of it as a robot assistant that handles repetitive tasks for us without manual intervention.
 
+![Weekly Sales Report Workflow Diagram](./sales-workflow-svg.svg "Visual representation of the sales report workflow process")
+*Figure 1: Visual representation of the sales report workflow process*
+
 ## When Does It Run?
 
 The workflow runs in two ways:
@@ -92,6 +95,10 @@ If the workflow fails:
 2. For Dropbox authentication issues, verify that our app still has the proper permissions in the Dropbox Developer Console
 3. If files are missing, check the relevant Dropbox folders
 4. For email problems, verify SendGrid settings and API keys
+
+## Visual Workflow Reference
+
+For a more detailed visual reference of this process, refer to Figure 1 at the beginning of this document. The diagram illustrates how each component connects and the exact sequence of operations that occur during the execution of the workflow.
 
 ---
 
