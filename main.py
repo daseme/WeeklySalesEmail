@@ -319,13 +319,22 @@ def run_sales_report() -> tuple[bool, Optional[Config]]:
             management_success = False
 
         # Determine overall success
-        # Determine overall success
         if config.test_mode:
             # In test mode, we only process one AE, so consider it a success
             # if at least one report was sent successfully and the management report was sent.
             success = (success_count > 0) and management_success
         else:
-            # In production, all AE reports must be sent
+                # Production mode - send reports for all AEs
+            for ae_name, report_path in reports_created.items():
+                if process_ae_report(
+                    ae_name,
+                    report_path,
+                    sales_data,
+                    sales_analytics,
+                    email_sender,
+                    logger
+                ):
+                    success_count += 1
             success = (success_count == total_reports) and management_success
 
         status = "SUCCESS" if success else "FAILURE"
